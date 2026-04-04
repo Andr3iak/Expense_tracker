@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react';
 export const GroupPage = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
-  const [expenses, setExpenses] = useState([]);
+  const [expenses, setExpenses] = useState<{ id: string; description: string; amount: number; paidBy: string; date: string }[]>([]);
   const [groupName, setGroupName] = useState('');
 
   useEffect(() => {
-    // Временно заглушка
     setGroupName(`Группа ${groupId}`);
     setExpenses([
       { id: '1', description: 'Такси', amount: 500, paidBy: 'Анна', date: '2024-03-20' },
