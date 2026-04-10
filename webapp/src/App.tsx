@@ -1,13 +1,21 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { HomePage } from './pages';
+import { AppRoot } from '@telegram-apps/telegram-ui';
+import { HomePage, GroupPage, AddExpensePage } from './pages';
+import { ThemeProvider } from './components/ThemeProvider';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-      </Routes>
-    </BrowserRouter>
+    <AppRoot>
+      <ThemeProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/group/:groupId" element={<GroupPage />} />
+            <Route path="/group/:groupId/add-expense" element={<AddExpensePage />} />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
+    </AppRoot>
   );
 }
 

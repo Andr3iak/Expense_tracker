@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useThemeParams } from '@telegram-apps/sdk-react';
 
 export interface TelegramTheme {
   bgColor: string;
@@ -12,7 +11,6 @@ export interface TelegramTheme {
 }
 
 export const useTelegramTheme = (): TelegramTheme => {
-  const themeParams = useThemeParams();
   const [theme, setTheme] = useState<TelegramTheme>({
     bgColor: '#ffffff',
     textColor: '#000000',
@@ -24,18 +22,20 @@ export const useTelegramTheme = (): TelegramTheme => {
   });
 
   useEffect(() => {
-    if (themeParams) {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.themeParams) {
+      const tp = tg.themeParams;
       setTheme({
-        bgColor: themeParams.backgroundColor || '#ffffff',
-        textColor: themeParams.textColor || '#000000',
-        hintColor: themeParams.hintColor || '#999999',
-        linkColor: themeParams.linkColor || '#2aabee',
-        buttonColor: themeParams.buttonColor || '#2aabee',
-        buttonTextColor: themeParams.buttonTextColor || '#ffffff',
-        isDark: themeParams.isDark || false,
+        bgColor: tp.bg_color || '#ffffff',
+        textColor: tp.text_color || '#000000',
+        hintColor: tp.hint_color || '#999999',
+        linkColor: tp.link_color || '#2aabee',
+        buttonColor: tp.button_color || '#2aabee',
+        buttonTextColor: tp.button_text_color || '#ffffff',
+        isDark: tg.colorScheme === 'dark',
       });
     }
-  }, [themeParams]);
+  }, []);
 
   return theme;
 };

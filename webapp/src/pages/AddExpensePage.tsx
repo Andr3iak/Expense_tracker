@@ -1,17 +1,35 @@
+// src/pages/AddExpensePage.tsx
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Button, Input, Title } from '@telegram-apps/telegram-ui';
+import { useTelegramAuth } from '../hooks';
+import { mockExpensesApi } from '../services/mockDb';
 
 export const AddExpensePage = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
+  const { user } = useTelegramAuth();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Расход добавлен: ${description} на сумму ${amount} ₽`);
-    navigate(`/group/${groupId}`);
+    if (!groupId || !user) return;
+    setLoading(true);
+    try {
+      await mockExpensesApi.create(groupId, {
+        amount: parseFloat(amount),
+        description,
+        paidBy: user.id,
+        participants: [user.id], // упрощённо: только текущий пользователь
+      });
+      navigate(`/group/${groupId}`);
+    } catch (err) {
+      alert('Ошибка при сохранении расхода');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -37,8 +55,8 @@ export const AddExpensePage = () => {
             required
           />
         </div>
-        <Button stretched mode="filled" type="submit" style={{ marginTop: 24 }}>
-          Добавить расход
+        <Button stretched mode="filled" type="submit" disabled={loading} style={{ marginTop: 24 }}>
+          {loading ? 'Сохранение...' : 'Добавить расход'}
         </Button>
       </form>
     </div>

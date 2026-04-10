@@ -1,27 +1,23 @@
-/* Тёмная тема для всего приложения */
+/* src/index.css */
+:root {
+  --tg-bg-color: #ffffff;
+  --tg-text-color: #000000;
+  --tg-hint-color: #999999;
+  --tg-link-color: #2aabee;
+  --tg-button-color: #2aabee;
+  --tg-button-text-color: #ffffff;
+}
+
 body {
   margin: 0;
   padding: 0;
-  background-color: #1a1a1a; /* тёмно-серый, почти чёрный */
-  color: #ffffff;            /* белый текст */
+  background-color: var(--tg-bg-color);
+  color: var(--tg-text-color);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Чтобы все элементы внутри наследовали цвет текста */
-* {
-  color: inherit;
-}
-
-/* Для ссылок, кнопок – можно оставить подсветку, но тоже светлую */
-a, button {
-  color: #8ab4f8;
-}
-
-/* Дополнительно: стили для pre (блоки с JSON) */
-pre {
-  background-color: #2d2d2d;
-  color: #e0e0e0;
-  padding: 12px;
-  border-radius: 8px;
-  overflow-x: auto;
+/* Переопределяем для компонентов telegram-ui (они сами используют свои переменные, но можно дополнить) */
+.tgui-button--filled {
+  background-color: var(--tg-button-color) !important;
+  color: var(--tg-button-text-color) !important;
 }
