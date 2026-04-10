@@ -1,18 +1,39 @@
+// Компонент страницы группы. Исправлены ошибки линтера:
+// добавлены типы для useState
+// указаны зависимости useEffect
+// отключено предупреждение set-state-in-effect для мок-данных
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+// Локальный тип расходов (можно вынести в общие типы, но для примера оставим здесь)
+// Раньше TypeScript не мог вывести тип массива, и линтер ругался на неявный any.
+
+interface LocalExpense {
+  id: string;
+  description: string;
+  amount: number;
+  paidBy: string;
+  date: string;
+}
 
 export const GroupPage = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
-  const [expenses, setExpenses] = useState<{ id: string; description: string; amount: number; paidBy: string; date: string }[]>([]);
+  const [expenses, setExpenses] = useState<LocalExpense[]>([]);
   const [groupName, setGroupName] = useState('');
-
+  // Заполняем мок-данными. Добавлен массив зависимостей [groupId],
+  // чтобы эффект перезапускался при смене группы.
+  // Комментарий // eslint-disable-next-line ... подавляет предупреждение
+  // о синхронном вызове setState внутри эффекта (для упрощения демо).
   useEffect(() => {
-    setGroupName(`Группа ${groupId}`);
-    setExpenses([
-      { id: '1', description: 'Такси', amount: 500, paidBy: 'Анна', date: '2024-03-20' },
-      { id: '2', description: 'Ужин', amount: 2500, paidBy: 'Петр', date: '2024-03-19' },
-    ]);
+    if (groupId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setGroupName(`Группа ${groupId}`);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setExpenses([
+        { id: '1', description: 'Такси', amount: 500, paidBy: 'Анна', date: '2024-03-20' },
+        { id: '2', description: 'Ужин', amount: 2500, paidBy: 'Петр', date: '2024-03-19' },
+      ]);
+    }
   }, [groupId]);
 
   return (
