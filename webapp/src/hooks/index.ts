@@ -1,5 +1,2 @@
-
-// export { useTelegramTheme } from './useTelegramTheme';
-// export { useTelegramAuth } from './useTelegramAuth';
-// export type { TelegramTheme } from './useTelegramTheme';
-// export type { TelegramUser } from './useTelegramAuth';
+export { useTelegramAuth } from './useTelegramAuth';
+export type { TelegramUser } from './useTelegramAuth';

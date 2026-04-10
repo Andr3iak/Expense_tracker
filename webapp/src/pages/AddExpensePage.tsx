@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { Button, Input, Title } from '@telegram-apps/telegram-ui';
 
 export const AddExpensePage = () => {
   const { groupId } = useParams();
@@ -15,31 +16,30 @@ export const AddExpensePage = () => {
 
   return (
     <div style={{ padding: '16px' }}>
-      <h2>Новый расход</h2>
+      <Title level="2" style={{ marginBottom: 20 }}>Новый расход</Title>
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '16px' }}>
-          <label>Сумма</label>
-          <input
+        <div style={{ marginBottom: 16 }}>
+          <Input
+            header="Сумма"
             type="number"
+            placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px', marginTop: '4px' }}
           />
         </div>
-        <div style={{ marginBottom: '16px' }}>
-          <label>Описание</label>
-          <input
-            type="text"
+        <div style={{ marginBottom: 16 }}>
+          <Input
+            header="Описание"
+            placeholder="Например: такси, ужин..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px', marginTop: '4px' }}
           />
         </div>
-        <button type="submit" style={{ background: '#2aabee', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px' }}>
-          Добавить
-        </button>
+        <Button stretched mode="filled" type="submit" style={{ marginTop: 24 }}>
+          Добавить расход
+        </Button>
       </form>
     </div>
   );
