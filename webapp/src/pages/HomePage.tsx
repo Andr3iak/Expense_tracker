@@ -1,57 +1,23 @@
-import { useNavigate } from 'react-router-dom';
-
-const MOCK_GROUPS = [
-  { id: '1', name: 'Поездка на море', balance: 1234, membersCount: 4, lastActivity: 'сегодня' },
-  { id: '2', name: 'Квартира', balance: -567, membersCount: 2, lastActivity: 'вчера' },
-];
+import { useTelegramAuth } from '../hooks';
 
 export const HomePage = () => {
-  const navigate = useNavigate();
+  const { user, initDataRaw, isTelegramEnv } = useTelegramAuth();
 
   return (
-    <div style={{ padding: '16px' }}>
-      <h2>Привет, друг! 👋</h2>
-      <button
-        style={{
-          width: '100%',
-          padding: '12px',
-          marginBottom: '20px',
-          background: '#2aabee',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-        }}
-      >
-        + Создать группу
-      </button>
-
-      <h3>Ваши группы</h3>
-      {MOCK_GROUPS.map((group) => (
-        <div
-          key={group.id}
-          onClick={() => navigate(`/group/${group.id}`)}
-          style={{
-            padding: '12px',
-            marginBottom: '8px',
-            background: '#f5f5f5',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            display: 'flex',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <strong>{group.name}</strong>
-            <div style={{ fontSize: '12px', color: '#666' }}>
-              {group.membersCount} участника • {group.lastActivity}
-            </div>
-          </div>
-          <div style={{ color: group.balance >= 0 ? 'green' : 'red' }}>
-            {group.balance >= 0 ? '+' : '-'}{Math.abs(group.balance)} ₽
-          </div>
-        </div>
-      ))}
+    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+      <h1>📱 Трекер расходов</h1>
+      <h2>Статус Telegram окружения:</h2>
+      <p>{isTelegramEnv ? '✅ Запущено внутри Telegram' : '⚠️ Локальная разработка (мок-данные)'}</p>
+      
+      <h2>👤 Данные пользователя:</h2>
+      <pre>{JSON.stringify(user, null, 2)}</pre>
+      
+      <h2>🔑 initDataRaw (для отправки на бэкенд):</h2>
+      <pre style={{ fontSize: '12px', wordBreak: 'break-all', background: '#f0f0f0', padding: '8px', borderRadius: '4px' }}>
+        {initDataRaw || 'нет данных'}
+      </pre>
+      
+      <p>✨ Интерфейс работает, initData получена.</p>
     </div>
   );
 };

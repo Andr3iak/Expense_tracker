@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@telegram-apps/sdk": "^3.11.8",
     "@telegram-apps/sdk-react": "^3.3.9",
     "@telegram-apps/telegram-ui": "^2.1.13",
     "lucide-react": "^1.7.0",
