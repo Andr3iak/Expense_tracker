@@ -12,5 +12,5 @@ export class CreateExpenseDto {
 
     @IsArray()
     @IsNumber({}, { each: true })
-    participants: number[];
+    participantIds: number[]; // ← вместо participants
 }
