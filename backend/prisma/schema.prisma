@@ -8,6 +8,70 @@ generator client {
   output   = "../generated/prisma"
 }
 
+//выбор базы данных
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
+}
+
+//Описание моделей
+//в prisma @ это атрибут
+model User {
+  id                  Int                  @id @default(autoincrement()) //
+  telegramId          BigInt               @unique
+  username            String?
+  groups              GroupMember[]
+  expenses            Expense[]            @relation("PaidBy")
+  expenseParticipants ExpenseParticipant[]
+
+  @@map("users") //имя модели
+}
+
+model Group {
+  id        String        @id @default(cuid())
+  name      String
+  icon      String?
+  members   GroupMember[]
+  expenses  Expense[]
+  createdAt DateTime      @default(now())
+
+  @@map("groups")
+}
+
+model Expense {
+  id           String               @id @default(cuid())
+  groupId      String
+  amount       Float
+  description  String
+  paidBy       Int
+  participants ExpenseParticipant[]
+  date         DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  group        Group                @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidByUser   User                 @relation("PaidBy", fields: [paidBy], references: [id])
+
+  @@map("expenses")
+}
+
+model GroupMember {
+  id      String @id @default(cuid())
+  groupId String
+  userId  Int
+  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+model ExpenseParticipant {
+  id        String  @id @default(cuid())
+  expenseId String
+  userId    Int
+  expense   Expense @relation(fields: [expenseId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([expenseId, userId])
+  @@index([userId]) //для быстрого поиска по пользователю
+  @@map("expense_participants")
 }
