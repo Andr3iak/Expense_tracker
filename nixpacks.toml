@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["nodejs", "nodePackages.pnpm"]
+nixPkgs = ["nodePackages.pnpm"]
 
 [phases.build]
 cmds = [
