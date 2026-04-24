@@ -1,28 +1,37 @@
-// src/pages/AddExpensePage.tsx
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button, Input, Title } from '@telegram-apps/telegram-ui';
-import { useTelegramAuth } from '../hooks';
-import { mockExpensesApi } from '../services/mockDb';
+import { useUser } from '../context/UserContext';
+import { groupsApi, expensesApi } from '../utils/api';
 
 export const AddExpensePage = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
-  const { user } = useTelegramAuth();
+  const { user } = useUser();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+  const [memberIds, setMemberIds] = useState<number[]>([]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!groupId) return;
+    // Загружаем участников группы, чтобы расход делился на всех, а не только на текущего юзера.
+    groupsApi.getById(groupId).then((group) => {
+      setMemberIds(group.members.map((m) => m.userId));
+    });
+  }, [groupId]);
+
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!groupId || !user) return;
     setLoading(true);
     try {
-      await mockExpensesApi.create(groupId, {
+      const participants = memberIds.length > 0 ? memberIds : [user.id];
+      await expensesApi.create(groupId, {
         amount: parseFloat(amount),
         description,
         paidBy: user.id,
-        participants: [user.id], // упрощённо: только текущий пользователь
+        participantIds: participants,
       });
       navigate(`/group/${groupId}`);
     } catch (err) {

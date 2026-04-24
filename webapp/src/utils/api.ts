@@ -46,19 +46,44 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   }
   return res.json();
 }
-// Каждый метод теперь явно указывает, какие типы возвращает и принимает.
+export interface DbUser {
+  id: number;
+  telegramId: number;
+  username?: string | null;
+}
+
+// Интерфейс для полных данных группы с участниками (возвращает GET /groups/:id).
+export interface GroupDetail {
+  id: string;
+  name: string;
+  icon: string | null;
+  createdAt: string;
+  members: Array<{ id: string; userId: number; user: { id: number; username: string | null } }>;
+}
+
+export const usersApi = {
+  upsert: (data: { telegramId: number; username?: string; firstName?: string }): Promise<DbUser> =>
+    request<DbUser>('/users/upsert', { method: 'POST', body: JSON.stringify(data) }),
+};
+
 export const groupsApi = {
-  getAll: (): Promise<Group[]> => request<Group[]>('/groups'),
-  create: (data: { name: string; icon?: string }): Promise<Group> =>
+  getAll: (userId: number): Promise<Group[]> => request<Group[]>(`/groups?userId=${userId}`),
+  create: (data: { name: string; icon?: string; userId: number }): Promise<Group> =>
     request<Group>('/groups', { method: 'POST', body: JSON.stringify(data) }),
+  getById: (id: string): Promise<GroupDetail> => request<GroupDetail>(`/groups/${id}`),
 };
 
 export const expensesApi = {
-  getByGroup: (groupId: string): Promise<Expense[]> => request<Expense[]>(`/groups/${groupId}/expenses`),
-  create: (groupId: string, data: Omit<Expense, 'id'>): Promise<Expense> =>
+  getByGroup: (groupId: string): Promise<Expense[]> =>
+    request<Expense[]>(`/groups/${groupId}/expenses`),
+  create: (
+    groupId: string,
+    data: { amount: number; description: string; paidBy: number; participantIds: number[] },
+  ): Promise<Expense> =>
     request<Expense>(`/groups/${groupId}/expenses`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
 export const balancesApi = {
-  getByGroup: (groupId: string): Promise<BalanceInfo> => request<BalanceInfo>(`/groups/${groupId}/balances`),
+  getByGroup: (groupId: string): Promise<BalanceInfo> =>
+    request<BalanceInfo>(`/groups/${groupId}/balances`),
 };

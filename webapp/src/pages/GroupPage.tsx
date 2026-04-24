@@ -1,28 +1,29 @@
-// src/pages/GroupPage.tsx
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Button, List, Section, Cell, Avatar, Title, Text } from '@telegram-apps/telegram-ui';
-import { mockExpensesApi, mockBalancesApi, mockGroupsApi } from '../services/mockDb';
-import type { Expense, Group } from '../utils/api.ts';
+import { groupsApi, expensesApi, balancesApi } from '../utils/api';
+import type { Expense, BalanceInfo, GroupDetail } from '../utils/api';
 
 export const GroupPage = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
-  const [group, setGroup] = useState<Group | null>(null);
+  const [group, setGroup] = useState<GroupDetail | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [balanceInfo, setBalanceInfo] = useState<{ total: number; debts: any[] }>({ total: 0, debts: [] });
+  const [balanceInfo, setBalanceInfo] = useState<BalanceInfo>({ total: 0, debts: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!groupId) return;
     const loadData = async () => {
       setLoading(true);
-      const allGroups = await mockGroupsApi.getAll();
-      const found = allGroups.find(g => g.id === groupId);
-      setGroup(found || null);
-      const expensesData = await mockExpensesApi.getByGroup(groupId);
+      // Параллельный запрос трёх независимых ресурсов — быстрее, чем последовательный.
+      const [groupData, expensesData, balances] = await Promise.all([
+        groupsApi.getById(groupId),
+        expensesApi.getByGroup(groupId),
+        balancesApi.getByGroup(groupId),
+      ]);
+      setGroup(groupData);
       setExpenses(expensesData);
-      const balances = await mockBalancesApi.getByGroup(groupId);
       setBalanceInfo(balances);
       setLoading(false);
     };
@@ -46,15 +47,14 @@ export const GroupPage = () => {
         </Button>
       </div>
 
-      {/* Сводка долгов */}
       {balanceInfo.debts.length > 0 && (
         <div style={{ marginBottom: 20, padding: 12, background: 'var(--tg-bg-color)', borderRadius: 12 }}>
           <Text weight="2">Кто кому должен:</Text>
           {balanceInfo.debts.map(debt => (
             <Text key={debt.userId} style={{ fontSize: 14 }}>
-              {debt.amount > 0 
-                ? `💰 Пользователь ${debt.userId} получит ${debt.amount} ₽`
-                : `💸 Пользователь ${debt.userId} должен ${-debt.amount} ₽`
+              {debt.amount > 0
+                ? `💰 ${debt.userName} получит ${debt.amount} ₽`
+                : `💸 ${debt.userName} должен ${-debt.amount} ₽`
               }
             </Text>
           ))}

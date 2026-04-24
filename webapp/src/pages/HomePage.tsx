@@ -1,13 +1,12 @@
-// src/pages/HomePage.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, List, Section, Cell, Avatar, Title, Input } from '@telegram-apps/telegram-ui';
-import { useTelegramAuth } from '../hooks';
-import { mockGroupsApi, mockBalancesApi } from '../services/mockDb';
-import type { Group } from '../utils/api.ts';
+import { useUser } from '../context/UserContext';
+import { groupsApi } from '../utils/api';
+import type { Group } from '../utils/api';
 
 export const HomePage = () => {
-  const { user } = useTelegramAuth();
+  const { user } = useUser();
   const navigate = useNavigate();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,26 +15,21 @@ export const HomePage = () => {
   const [newGroupIcon, setNewGroupIcon] = useState('');
 
   const loadGroups = async () => {
+    if (!user) return;
     setLoading(true);
-    const data = await mockGroupsApi.getAll();
-    // Для каждой группы подгружаем баланс (общую сумму расходов)
-    const groupsWithBalance = await Promise.all(
-      data.map(async (g) => {
-        const { total } = await mockBalancesApi.getByGroup(g.id);
-        return { ...g, balance: total };
-      })
-    );
-    setGroups(groupsWithBalance);
+    const data = await groupsApi.getAll(user.id);
+    setGroups(data);
     setLoading(false);
   };
 
+  // Загружаем группы только когда пользователь авторизован через бэкенд.
   useEffect(() => {
-    loadGroups();
-  }, []);
+    if (user) loadGroups();
+  }, [user?.id]);
 
   const handleCreateGroup = async () => {
-    if (!newGroupName.trim()) return;
-    await mockGroupsApi.create({ name: newGroupName, icon: newGroupIcon || undefined });
+    if (!newGroupName.trim() || !user) return;
+    await groupsApi.create({ name: newGroupName, icon: newGroupIcon || undefined, userId: user.id });
     setNewGroupName('');
     setNewGroupIcon('');
     setShowCreate(false);
@@ -48,7 +42,6 @@ export const HomePage = () => {
     <div style={{ padding: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <Title level="2">Мои группы</Title>
-        <div>Привет, {user?.firstName}!</div>
         <Button mode="filled" onClick={() => setShowCreate(true)}>+ Создать</Button>
       </div>
 
@@ -81,7 +74,7 @@ export const HomePage = () => {
             <Cell
               key={group.id}
               before={<Avatar>{group.icon || '📁'}</Avatar>}
-              subtitle={`${group.membersCount} участников • всего ${group.balance} ₽`}
+              subtitle={`${group.membersCount} участников`}
               after={<Button mode="plain" onClick={() => navigate(`/group/${group.id}`)}>Открыть</Button>}
             >
               {group.name}

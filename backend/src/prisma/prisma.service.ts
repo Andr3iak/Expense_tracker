@@ -1,12 +1,16 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '../../generated/prisma';
+import { PrismaClient } from '@prisma/client';
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { join } from 'path';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
-    // schema.prisma не содержит url — он задан в prisma.config.ts только для CLI.
-    // Передаём URL явно, чтобы PrismaClient знал путь к БД во время выполнения.
-    super({ datasourceUrl: 'file:./dev.db' });
+    // Prisma 7 убрал url из schema.prisma — соединение передаётся через driver adapter.
+    // __dirname в prod = backend/dist/src/prisma/, три уровня вверх до корня backend/.
+    const dbPath = join(__dirname, '..', '..', '..', 'dev.db');
+    const adapter = new PrismaBetterSqlite3({ url: dbPath });
+    super({ adapter });
   }
 
   async onModuleInit() {
