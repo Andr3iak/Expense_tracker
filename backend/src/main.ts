@@ -14,8 +14,8 @@ async function bootstrap() {
   app.enableCors({ origin: '*' });
   app.setGlobalPrefix('api');
 
-  // __dirname в prod указывает на backend/dist/, поэтому два уровня вверх до webapp/dist.
-  const staticPath = join(__dirname, '..', '..', 'webapp', 'dist');
+  // __dirname = backend/dist/src/, три уровня вверх до корня репо, затем webapp/dist.
+  const staticPath = join(__dirname, '..', '..', '..', 'webapp', 'dist');
   app.useStaticAssets(staticPath);
 
   // SPA-fallback: все не-API маршруты отдают index.html, чтобы React Router работал.
