@@ -62,3 +62,8 @@ export const expensesApi = {
 export const balancesApi = {
   getByGroup: (groupId: string): Promise<BalanceInfo> => request<BalanceInfo>(`/groups/${groupId}/balances`),
 };
+export const groupsApi = {
+  getAll: (): Promise<Group[]> => request<Group[]>('/groups'),
+  create: (data: { name: string; icon?: string }): Promise<Group> =>
+    request<Group>('/groups', { method: 'POST', body: JSON.stringify(data) }),
+};
