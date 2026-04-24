@@ -23,7 +23,6 @@
       "@types/*": ["src/types/*"],
       "@utils/*": ["src/utils/*"]
     },
-    // 👇 ДОБАВИТЬ ЭТУ СТРОКУ
     "types": ["vitest/globals", "@testing-library/jest-dom"]
   },
   "include": ["src"],
