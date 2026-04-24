@@ -23,6 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
+coverage/
+
 # WSL / Windows specific
 *.db
 *.sqlite
