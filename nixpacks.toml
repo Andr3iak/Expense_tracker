@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_22", "nodePackages.pnpm"]
+
+[phases.build]
+cmds = [
+  "cd webapp && pnpm install && pnpm build",
+  "cd backend && pnpm install && pnpm prisma generate && pnpm prisma migrate deploy && pnpm build"
+]
+
+[start]
+cmd = "node backend/dist/src/main.js"
