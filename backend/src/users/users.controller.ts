@@ -12,12 +12,13 @@ export class UsersController {
 
   @Post('upsert')
   async upsert(@Body() body: { telegramId: number; username?: string; firstName?: string }) {
-    const user = await this.usersService.upsertUser(body.telegramId, body.username);
+    const user = await this.usersService.upsertUser(body.telegramId, body.username, body.firstName);
     // BigInt не сериализуется в JSON, возвращаем как Number.
     return {
       id: user.id,
       telegramId: Number(user.telegramId),
       username: user.username,
+      firstName: user.firstName,
     };
   }
 }

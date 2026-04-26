@@ -11,16 +11,16 @@ export class UsersService {
       id: u.id,
       telegramId: Number(u.telegramId),
       username: u.username,
+      firstName: u.firstName,
     }));
   }
 
-  async upsertUser(telegramId: number, username?: string) {
+  async upsertUser(telegramId: number, username?: string, firstName?: string) {
     // Telegram ID может превышать Number.MAX_SAFE_INTEGER, поэтому в схеме BigInt.
-    // JS-число безопасно конвертируется в BigInt для Prisma-запроса.
     return this.prisma.user.upsert({
       where: { telegramId: BigInt(telegramId) },
-      update: { username: username ?? null },
-      create: { telegramId: BigInt(telegramId), username: username ?? null },
+      update: { username: username ?? null, firstName: firstName ?? null },
+      create: { telegramId: BigInt(telegramId), username: username ?? null, firstName: firstName ?? null },
     });
   }
 }

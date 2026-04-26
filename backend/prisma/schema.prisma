@@ -15,14 +15,15 @@ datasource db {
 //Описание моделей
 //в prisma @ это атрибут
 model User {
-  id                  Int                  @id @default(autoincrement()) //
+  id                  Int                  @id @default(autoincrement())
   telegramId          BigInt               @unique
   username            String?
+  firstName           String?
   groups              GroupMember[]
   expenses            Expense[]            @relation("PaidBy")
   expenseParticipants ExpenseParticipant[]
 
-  @@map("users") //имя модели
+  @@map("users")
 }
 
 model Group {

@@ -72,4 +72,12 @@ export class GroupsService {
       update: {},
     });
   }
+
+  async removeMember(groupId: string, userId: number) {
+    return this.prisma.groupMember.deleteMany({ where: { groupId, userId } });
+  }
+
+  async updateGroup(groupId: string, data: { name?: string; icon?: string | null }) {
+    return this.prisma.group.update({ where: { id: groupId }, data });
+  }
 }

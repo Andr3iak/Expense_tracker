@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 
 @Controller('groups')
@@ -23,5 +23,15 @@ export class GroupsController {
   @Post(':id/members')
   addMember(@Param('id') groupId: string, @Body() body: { userId: number }) {
     return this.groupsService.addMember(groupId, body.userId);
+  }
+
+  @Delete(':id/members/:userId')
+  removeMember(@Param('id') groupId: string, @Param('userId') userId: string) {
+    return this.groupsService.removeMember(groupId, parseInt(userId, 10));
+  }
+
+  @Patch(':id')
+  updateGroup(@Param('id') id: string, @Body() body: { name?: string; icon?: string }) {
+    return this.groupsService.updateGroup(id, body);
   }
 }
