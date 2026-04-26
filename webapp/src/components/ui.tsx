@@ -190,6 +190,41 @@ export function EmojiIcon({ cat }: { cat: string }) {
   return <span>{EMOJI_MAP[cat] || '📦'}</span>;
 }
 
+// Набор эмодзи для выбора иконки группы — сгруппированы по теме.
+const EMOJI_GRID = [
+  '✈️','🏖️','🌍','🎡','🏕️','🚢',
+  '🍕','🍣','🍵','🥂','🍔','🎂',
+  '🏠','🎮','📚','🎵','🎬','🛒',
+  '⚽','🏋️','🚴','🏊','🎾','⛷️',
+  '💰','💳','💸','🎁','🏦','📊',
+  '🎉','🔥','⚡','🌈','❤️','🐶',
+];
+
+// EmojiPicker — сетка выбора эмодзи, рендерится внутри Sheet.
+export function EmojiPicker({
+  show, onClose, onSelect,
+}: {
+  show: boolean; onClose: () => void; onSelect: (e: string) => void;
+}) {
+  return (
+    <Sheet show={show} onClose={onClose} title="Иконка группы">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, padding: '0 16px 8px' }}>
+        {EMOJI_GRID.map((e) => (
+          <button
+            key={e}
+            onClick={() => { onSelect(e); onClose(); }}
+            style={{
+              background: 'none', border: 'none', fontSize: 30,
+              padding: '10px 4px', cursor: 'pointer', borderRadius: 8,
+              lineHeight: 1,
+            }}
+          >{e}</button>
+        ))}
+      </div>
+    </Sheet>
+  );
+}
+
 // avatarColor — детерминированный цвет аватара по числовому userId.
 // Обеспечивает: один пользователь → один цвет везде в приложении.
 export function avatarColor(userId: number): string {

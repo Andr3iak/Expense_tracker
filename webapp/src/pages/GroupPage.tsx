@@ -1,12 +1,18 @@
 // Главный экран группы: баланс, участники, расходы, нижняя панель навигации.
 
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { NavBar, Card, SLabel, Av, Pill, EmojiIcon, C } from '../components/ui';
+import { useState, useEffect, useCallback } from 'react';
+import { NavBar, Card, SLabel, Av, Pill, EmojiIcon, Sheet, EmojiPicker, Btn, C } from '../components/ui';
 import { useUser } from '../context/UserContext';
 import { groupsApi, expensesApi, balancesApi } from '../utils/api';
 import type { Expense, BalanceInfo, GroupDetail } from '../utils/api';
 import { avatarColor, initials } from '../components/ui';
+import { hapticNotification } from '../hooks';
+
+// Имя пользователя с fallback: firstName → username → "User N"
+function displayName(user: { username: string | null; firstName: string | null }, userId: number): string {
+  return user.firstName || user.username || `User ${userId}`;
+}
 
 export const GroupPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
@@ -17,7 +23,13 @@ export const GroupPage = () => {
   const [balanceInfo, setBalanceInfo] = useState<BalanceInfo>({ total: 0, debts: [] });
   const [q, setQ] = useState('');
 
-  useEffect(() => {
+  // Состояние шита редактирования группы (название + иконка)
+  const [editSheet, setEditSheet] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editIcon, setEditIcon] = useState('');
+  const [emojiOpen, setEmojiOpen] = useState(false);
+
+  const loadAll = useCallback(() => {
     if (!groupId) return;
     Promise.all([
       groupsApi.getById(groupId),
@@ -30,18 +42,33 @@ export const GroupPage = () => {
     });
   }, [groupId]);
 
+  useEffect(() => { loadAll(); }, [loadAll]);
+
   if (!group) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
-  // Баланс текущего пользователя в этой группе
   const myBalance = balanceInfo.debts.find((d) => d.userId === user?.id)?.amount ?? 0;
   const filtered = group.members.filter((m) => {
-    const name = m.user.username || `User ${m.userId}`;
+    const name = displayName(m.user, m.userId);
     return name.toLowerCase().includes(q.toLowerCase());
   });
 
+  const openEdit = () => {
+    setEditName(group.name);
+    setEditIcon(group.icon || '');
+    setEditSheet(true);
+  };
+
+  const saveEdit = async () => {
+    if (!groupId || !editName.trim()) return;
+    await groupsApi.update(groupId, { name: editName.trim(), icon: editIcon || undefined });
+    hapticNotification('success');
+    setEditSheet(false);
+    loadAll();
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: C.bg, position: 'relative' }}>
-      <NavBar title={group.name} onBack={() => navigate('/')} rightLabel="⚙️" onRight={() => {}} />
+      <NavBar title={group.name} onBack={() => navigate('/')} rightLabel="⚙️" onRight={openEdit} />
 
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingBottom: 80 }}>
         {/* Hero-блок с балансом текущего пользователя */}
@@ -67,12 +94,11 @@ export const GroupPage = () => {
         <SLabel>Участники</SLabel>
         <Card>
           {filtered.map((m) => {
-            const name = m.user.username || `User ${m.userId}`;
+            const name = displayName(m.user, m.userId);
             const memberBalance = balanceInfo.debts.find((d) => d.userId === m.userId)?.amount ?? 0;
             return (
               <div key={m.id} style={{
-                padding: '11px 16px',
-                borderBottom: `0.5px solid ${C.border}`,
+                padding: '11px 16px', borderBottom: `0.5px solid ${C.border}`,
                 display: 'flex', alignItems: 'center', gap: 12,
               }}>
                 <Av m={{ initials: initials(name), color: avatarColor(m.userId) }} size={36} />
@@ -83,7 +109,6 @@ export const GroupPage = () => {
               </div>
             );
           })}
-          {/* Кнопка приглашения нового участника */}
           <div onClick={() => navigate(`/group/${groupId}/members`)} style={{
             padding: '11px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
           }}>
@@ -160,6 +185,31 @@ export const GroupPage = () => {
           )
         )}
       </div>
+
+      {/* Шит редактирования названия и иконки группы */}
+      <Sheet show={editSheet} onClose={() => setEditSheet(false)} title="Настройки группы">
+        <div style={{ padding: '0 20px 8px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div onClick={() => setEmojiOpen(true)} style={{
+              width: 72, height: 72, borderRadius: 36, background: C.bg,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: editIcon ? 40 : 28, cursor: 'pointer', color: C.hint,
+            }}>{editIcon || '+'}</div>
+          </div>
+          <input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            placeholder="Название группы"
+            style={{
+              border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px',
+              fontSize: 16, outline: 'none', fontFamily: 'inherit',
+            }}
+          />
+          <Btn label="Сохранить" onTap={saveEdit} disabled={!editName.trim()} />
+        </div>
+      </Sheet>
+
+      <EmojiPicker show={emojiOpen} onClose={() => setEmojiOpen(false)} onSelect={setEditIcon} />
     </div>
   );
 };
