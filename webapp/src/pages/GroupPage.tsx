@@ -1,81 +1,165 @@
+// Главный экран группы: баланс, участники, расходы, нижняя панель навигации.
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Button, List, Section, Cell, Avatar, Title, Text } from '@telegram-apps/telegram-ui';
+import { NavBar, Card, SLabel, Av, Pill, EmojiIcon, C } from '../components/ui';
+import { useUser } from '../context/UserContext';
 import { groupsApi, expensesApi, balancesApi } from '../utils/api';
 import type { Expense, BalanceInfo, GroupDetail } from '../utils/api';
+import { avatarColor, initials } from '../components/ui';
 
 export const GroupPage = () => {
-  const { groupId } = useParams();
+  const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
+  const { user } = useUser();
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [balanceInfo, setBalanceInfo] = useState<BalanceInfo>({ total: 0, debts: [] });
-  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState('');
 
   useEffect(() => {
     if (!groupId) return;
-    const loadData = async () => {
-      setLoading(true);
-      // Параллельный запрос трёх независимых ресурсов — быстрее, чем последовательный.
-      const [groupData, expensesData, balances] = await Promise.all([
-        groupsApi.getById(groupId),
-        expensesApi.getByGroup(groupId),
-        balancesApi.getByGroup(groupId),
-      ]);
-      setGroup(groupData);
-      setExpenses(expensesData);
-      setBalanceInfo(balances);
-      setLoading(false);
-    };
-    loadData();
+    Promise.all([
+      groupsApi.getById(groupId),
+      expensesApi.getByGroup(groupId),
+      balancesApi.getByGroup(groupId),
+    ]).then(([g, exps, bal]) => {
+      setGroup(g);
+      setExpenses(exps);
+      setBalanceInfo(bal);
+    });
   }, [groupId]);
 
-  if (loading) return <div style={{ padding: 20 }}>Загрузка...</div>;
-  if (!group) return <div style={{ padding: 20 }}>Группа не найдена</div>;
+  if (!group) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
+
+  // Баланс текущего пользователя в этой группе
+  const myBalance = balanceInfo.debts.find((d) => d.userId === user?.id)?.amount ?? 0;
+  const filtered = group.members.filter((m) => {
+    const name = m.user.username || `User ${m.userId}`;
+    return name.toLowerCase().includes(q.toLowerCase());
+  });
 
   return (
-    <div style={{ padding: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div>
-          <Title level="2">{group.icon} {group.name}</Title>
-          <Text style={{ color: 'var(--tg-hint-color)' }}>
-            Всего потрачено: {balanceInfo.total} ₽
-          </Text>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: C.bg, position: 'relative' }}>
+      <NavBar title={group.name} onBack={() => navigate('/')} rightLabel="⚙️" onRight={() => {}} />
+
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingBottom: 80 }}>
+        {/* Hero-блок с балансом текущего пользователя */}
+        <div style={{
+          background: C.card, padding: '22px 20px 18px',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          borderBottom: `0.5px solid ${C.sep}`, marginBottom: 4,
+        }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>{group.icon || '📁'}</div>
+          <div style={{ fontSize: 13, color: C.hint, marginBottom: 4 }}>Ваш баланс</div>
+          <Pill n={myBalance} large />
         </div>
-        <Button onClick={() => navigate(`/group/${groupId}/add-expense`)} mode="filled">
-          + Расход
-        </Button>
+
+        {/* Поиск по участникам */}
+        <div style={{ padding: '8px 16px' }}>
+          <div style={{ background: C.card, borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: C.hint, fontSize: 15 }}>🔍</span>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск по имени"
+              style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, background: 'none', fontFamily: 'inherit' }} />
+          </div>
+        </div>
+
+        <SLabel>Участники</SLabel>
+        <Card>
+          {filtered.map((m) => {
+            const name = m.user.username || `User ${m.userId}`;
+            const memberBalance = balanceInfo.debts.find((d) => d.userId === m.userId)?.amount ?? 0;
+            return (
+              <div key={m.id} style={{
+                padding: '11px 16px',
+                borderBottom: `0.5px solid ${C.border}`,
+                display: 'flex', alignItems: 'center', gap: 12,
+              }}>
+                <Av m={{ initials: initials(name), color: avatarColor(m.userId) }} size={36} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 500 }}>{name}{m.userId === user?.id ? ' (вы)' : ''}</div>
+                </div>
+                <Pill n={memberBalance} />
+              </div>
+            );
+          })}
+          {/* Кнопка приглашения нового участника */}
+          <div onClick={() => navigate(`/group/${groupId}/members`)} style={{
+            padding: '11px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 18, background: C.bg,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.blue, fontSize: 20,
+            }}>+</div>
+            <div style={{ color: C.blue, fontWeight: 500, fontSize: 15 }}>Пригласить участника</div>
+          </div>
+        </Card>
+
+        <SLabel>Расходы</SLabel>
+        <Card>
+          {expenses.length === 0 && (
+            <div style={{ padding: 20, textAlign: 'center', color: C.hint, fontSize: 14 }}>
+              Расходов пока нет. Добавьте первый!
+            </div>
+          )}
+          {expenses.map((e, i) => (
+            <div key={e.id}
+              onClick={() => navigate(`/group/${groupId}/dispute/${e.id}`, { state: e })}
+              style={{
+                padding: '12px 16px',
+                borderBottom: i < expenses.length - 1 ? `0.5px solid ${C.border}` : 'none',
+                display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+              }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 10, background: C.bg,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0,
+              }}><EmojiIcon cat="other" /></div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 500, fontSize: 15 }}>{e.description}</div>
+                <div style={{ fontSize: 12, color: C.hint }}>
+                  {new Date(e.date).toLocaleDateString('ru', { day: 'numeric', month: 'short' })}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontWeight: 600 }}>{e.amount.toLocaleString('ru')} ₽</div>
+              </div>
+            </div>
+          ))}
+        </Card>
       </div>
 
-      {balanceInfo.debts.length > 0 && (
-        <div style={{ marginBottom: 20, padding: 12, background: 'var(--tg-bg-color)', borderRadius: 12 }}>
-          <Text weight="2">Кто кому должен:</Text>
-          {balanceInfo.debts.map(debt => (
-            <Text key={debt.userId} style={{ fontSize: 14 }}>
-              {debt.amount > 0
-                ? `💰 ${debt.userName} получит ${debt.amount} ₽`
-                : `💸 ${debt.userName} должен ${-debt.amount} ₽`
-              }
-            </Text>
-          ))}
-        </div>
-      )}
-
-      <List>
-        <Section header="История расходов">
-          {expenses.length === 0 && <Cell>Пока нет расходов. Добавьте первый!</Cell>}
-          {expenses.map((exp) => (
-            <Cell
-              key={exp.id}
-              before={<Avatar>💰</Avatar>}
-              subtitle={`Заплатил: ${exp.paidBy} • ${new Date(exp.date).toLocaleDateString()}`}
-              after={<Text style={{ fontWeight: 'bold' }}>{exp.amount} ₽</Text>}
-            >
-              {exp.description}
-            </Cell>
-          ))}
-        </Section>
-      </List>
+      {/* Нижняя панель навигации с FAB по центру */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)', borderTop: `0.5px solid ${C.sep}`,
+        padding: '10px 24px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-around', zIndex: 50,
+      }}>
+        {[
+          { icon: '💰', label: 'Баланс',  tap: () => navigate(`/group/${groupId}/balance`) },
+          { icon: '⚡', label: 'Быстро',  tap: () => navigate(`/group/${groupId}/quick-add`) },
+          { fab: true,                     tap: () => navigate(`/group/${groupId}/add-expense`) },
+          { icon: '🔒', label: 'Закрыть', tap: () => navigate(`/group/${groupId}/close`) },
+          { icon: '💬', label: 'Чат',     tap: () => {} },
+        ].map((b, i) =>
+          b.fab ? (
+            <button key={i} onClick={b.tap} style={{
+              background: C.blue, border: 'none', borderRadius: 28, width: 52, height: 52,
+              color: 'white', fontSize: 28, fontWeight: 200,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', boxShadow: '0 4px 16px rgba(42,171,238,0.4)',
+            }}>+</button>
+          ) : (
+            <button key={i} onClick={b.tap} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, color: C.hint,
+            }}>
+              <span style={{ fontSize: 22 }}>{b.icon}</span>
+              <span style={{ fontSize: 10, fontWeight: 500 }}>{b.label}</span>
+            </button>
+          )
+        )}
+      </div>
     </div>
   );
 };

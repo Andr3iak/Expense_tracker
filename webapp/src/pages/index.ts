@@ -1,3 +1,10 @@
 export { HomePage } from './HomePage';
 export { GroupPage } from './GroupPage';
 export { AddExpensePage } from './AddExpensePage';
+export { CreateGroupPage } from './CreateGroupPage';
+export { InviteMembersPage } from './InviteMembersPage';
+export { SplitModePage } from './SplitModePage';
+export { BalancePage } from './BalancePage';
+export { CloseGroupPage } from './CloseGroupPage';
+export { DisputePage } from './DisputePage';
+export { QuickAddPage } from './QuickAddPage';
