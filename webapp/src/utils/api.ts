@@ -1,4 +1,4 @@
-// API-слой для связи с бэкендом. Здесь заменены все 'any' на конкретные типы.
+// API-слой: все запросы к бэкенду. Типы соответствуют ответам NestJS-контроллеров.
 const API_BASE = '/api';
 // Общий тип ошибки от сервера
 
@@ -61,9 +61,17 @@ export interface GroupDetail {
   members: Array<{ id: string; userId: number; user: { id: number; username: string | null } }>;
 }
 
+// AppUser — полная модель пользователя, возвращаемая GET /users.
+export interface AppUser {
+  id: number;
+  telegramId: number;
+  username: string | null;
+}
+
 export const usersApi = {
   upsert: (data: { telegramId: number; username?: string; firstName?: string }): Promise<DbUser> =>
     request<DbUser>('/users/upsert', { method: 'POST', body: JSON.stringify(data) }),
+  getAll: (): Promise<AppUser[]> => request<AppUser[]>('/users'),
 };
 
 export const groupsApi = {
@@ -71,6 +79,8 @@ export const groupsApi = {
   create: (data: { name: string; icon?: string; userId: number }): Promise<Group> =>
     request<Group>('/groups', { method: 'POST', body: JSON.stringify(data) }),
   getById: (id: string): Promise<GroupDetail> => request<GroupDetail>(`/groups/${id}`),
+  addMember: (groupId: string, userId: number): Promise<unknown> =>
+    request(`/groups/${groupId}/members`, { method: 'POST', body: JSON.stringify({ userId }) }),
 };
 
 export const expensesApi = {
