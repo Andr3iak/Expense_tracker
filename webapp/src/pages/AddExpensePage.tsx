@@ -2,11 +2,12 @@
 // затем передаёт данные на экран SplitMode через router state.
 
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { NavBar, Card, SLabel, Av, Btn, C } from '../components/ui';
 import { groupsApi } from '../utils/api';
 import type { GroupDetail } from '../utils/api';
 import { avatarColor, initials } from '../components/ui';
+import { useBackButton, useMainButton, hapticImpact } from '../hooks';
 
 export const AddExpensePage = () => {
   const { groupId } = useParams<{ groupId: string }>();
@@ -28,15 +29,19 @@ export const AddExpensePage = () => {
 
   if (!group) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
-  const ok = !!amount && parseFloat(amount) > 0 && description.trim();
+  const ok = !!amount && parseFloat(amount) > 0 && !!description.trim();
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (!ok || !paidBy) return;
+    hapticImpact('light');
     // Данные расхода передаются через state, чтобы не загрязнять URL
     navigate(`/group/${groupId}/split`, {
       state: { amount: parseFloat(amount), description: description.trim(), paidBy },
     });
-  };
+  }, [ok, paidBy, amount, description, groupId]);
+
+  useBackButton(() => navigate(`/group/${groupId}`));
+  useMainButton('Далее →', handleNext, ok);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: C.bg }}>
@@ -90,7 +95,7 @@ export const AddExpensePage = () => {
         <SLabel>Кто заплатил</SLabel>
         <Card>
           {group.members.map((m, i) => {
-            const name = m.user.username || `User ${m.userId}`;
+            const name = m.user.firstName || m.user.username || `User ${m.userId}`;
             const isSelected = paidBy === m.userId;
             return (
               <div key={m.id} onClick={() => setPaidBy(m.userId)} style={{

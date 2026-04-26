@@ -7,6 +7,7 @@ import { NavBar, Btn, C } from '../components/ui';
 import { groupsApi, expensesApi } from '../utils/api';
 import type { GroupDetail } from '../utils/api';
 import { avatarColor, initials } from '../components/ui';
+import { hapticImpact, hapticNotification } from '../hooks';
 
 const SUGGESTIONS = [
   { label: 'Море ✈', tag: 'travel' },
@@ -38,12 +39,14 @@ export const QuickAddPage = () => {
   const handleAdd = async () => {
     const n = parseFloat(amount);
     if (!n || n <= 0 || !who || !groupId) return;
+    hapticImpact('medium');
     await expensesApi.create(groupId, {
       amount: n,
       description: tag || 'Быстрый расход',
       paidBy: who,
       participantIds: group.members.map((m) => m.userId),
     });
+    hapticNotification('success');
     setSuccess(true);
     // Сбрасываем форму через 1.8s и возвращаемся на экран группы
     setTimeout(() => navigate(`/group/${groupId}`), 1800);
@@ -97,7 +100,7 @@ export const QuickAddPage = () => {
           }}>Кто платил</div>
           <div style={{ display: 'flex', padding: '12px 16px', gap: 12, overflowX: 'auto' }}>
             {group.members.map((m) => {
-              const name = m.user.username || `User ${m.userId}`;
+              const name = m.user.firstName || m.user.username || `User ${m.userId}`;
               const color = avatarColor(m.userId);
               const active = who === m.userId;
               return (

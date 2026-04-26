@@ -1,12 +1,13 @@
 // Экран выбора способа разделения расхода между участниками.
 // Получает данные расхода (сумма, описание, плательщик) через router state от AddExpensePage.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { NavBar, Card, SLabel, Av, Btn, C } from '../components/ui';
 import { groupsApi, expensesApi } from '../utils/api';
 import type { GroupDetail } from '../utils/api';
 import { avatarColor, initials } from '../components/ui';
+import { useBackButton, useMainButton, hapticNotification, hapticImpact } from '../hooks';
 
 interface ExpenseState {
   amount: number;
@@ -47,21 +48,28 @@ export const SplitModePage = () => {
   const toggleSel = (id: number) =>
     setSel((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
-  const handleSubmit = async () => {
-    if (!groupId) return;
+  const handleSubmit = useCallback(async () => {
+    if (!groupId || loading) return;
     setLoading(true);
     try {
       await expensesApi.create(groupId, {
-        amount: exp.amount,
-        description: exp.description,
-        paidBy: exp.paidBy,
+        amount: exp!.amount,
+        description: exp!.description,
+        paidBy: exp!.paidBy,
         participantIds: activeIds,
       });
+      hapticNotification('success');
       navigate(`/group/${groupId}`);
     } finally {
       setLoading(false);
     }
-  };
+  }, [groupId, loading, activeIds, exp]);
+
+  const canSubmit = !loading && (mode !== 'selective' || sel.length > 0);
+
+  useBackButton(() => navigate(-1));
+  // Нативная MainButton Telegram — дублирует кнопку "Добавить расход" внутри экрана
+  useMainButton('Добавить расход', handleSubmit, canSubmit);
 
   const tabs = [
     { id: 'equal', label: 'Поровну' },
@@ -107,7 +115,7 @@ export const SplitModePage = () => {
         <SLabel>{mode === 'selective' ? 'Выберите участников' : 'Участники'}</SLabel>
         <Card>
           {group.members.map((m, i) => {
-            const name = m.user.username || `User ${m.userId}`;
+            const name = m.user.firstName || m.user.username || `User ${m.userId}`;
             const isActive = mode === 'equal' || sel.includes(m.userId);
             return (
               <div key={m.id}
@@ -171,8 +179,8 @@ export const SplitModePage = () => {
         <div style={{ padding: 16 }}>
           <Btn
             label="Добавить расход"
-            onTap={handleSubmit}
-            disabled={loading || (mode === 'selective' && sel.length === 0)}
+            onTap={() => { hapticImpact('medium'); handleSubmit(); }}
+            disabled={!canSubmit}
           />
         </div>
       </div>

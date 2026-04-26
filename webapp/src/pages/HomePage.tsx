@@ -22,8 +22,8 @@ export const HomePage = () => {
     });
   }, [user?.id]);
 
-  // Имя для аватара берём из Telegram-данных через хук useUser
-  const displayName = user?.username || 'User';
+  // Приоритет имени: firstName (из Telegram) → username → fallback
+  const displayName = user?.firstName || user?.username || 'User';
   const av = displayName.slice(0, 2).toUpperCase();
 
   if (loading) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
