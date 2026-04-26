@@ -1,13 +1,27 @@
 // Экран управления участниками группы.
-// Загружает всех зарегистрированных пользователей и показывает, кто уже в группе.
+// Приглашение через Telegram share, добавление из списка пользователей приложения.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { NavBar, Card, SLabel, Av, C } from '../components/ui';
 import { useUser } from '../context/UserContext';
 import { groupsApi, usersApi } from '../utils/api';
 import type { GroupDetail, AppUser } from '../utils/api';
 import { avatarColor, initials } from '../components/ui';
+import { hapticImpact, hapticNotification, shareLink } from '../hooks';
+
+// Имя пользователя с fallback: firstName → username → "User N"
+function displayName(firstName: string | null, username: string | null, id: number): string {
+  return firstName || username || `User ${id}`;
+}
+
+// Строит ссылку-приглашение в группу.
+// В Telegram среде используется deep link через бота, иначе — URL приложения.
+function buildInviteLink(groupId: string): string {
+  const botUsername = import.meta.env.VITE_BOT_USERNAME;
+  if (botUsername) return `https://t.me/${botUsername}?startapp=join_${groupId}`;
+  return `${window.location.origin}?join=${groupId}`;
+}
 
 export const InviteMembersPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
@@ -16,28 +30,51 @@ export const InviteMembersPage = () => {
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [allUsers, setAllUsers] = useState<AppUser[]>([]);
   const [q, setQ] = useState('');
+  const [copied, setCopied] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!groupId) return;
     const [g, users] = await Promise.all([groupsApi.getById(groupId), usersApi.getAll()]);
     setGroup(g);
     setAllUsers(users);
-  };
+  }, [groupId]);
 
-  useEffect(() => { loadData(); }, [groupId]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   if (!group) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
-  // Множество id участников для быстрой проверки принадлежности
   const memberIds = new Set(group.members.map((m) => m.userId));
   const available = allUsers.filter(
-    (u) => !memberIds.has(u.id) && (u.username || `User ${u.id}`).toLowerCase().includes(q.toLowerCase()),
+    (u) => !memberIds.has(u.id) && displayName(u.firstName, u.username, u.id).toLowerCase().includes(q.toLowerCase()),
   );
 
   const addMember = async (userId: number) => {
     if (!groupId) return;
+    hapticImpact('light');
     await groupsApi.addMember(groupId, userId);
+    hapticNotification('success');
     await loadData();
+  };
+
+  const removeMember = async (userId: number) => {
+    if (!groupId) return;
+    hapticImpact('medium');
+    await groupsApi.removeMember(groupId, userId);
+    await loadData();
+  };
+
+  // Генерирует ссылку и открывает Telegram share dialog (или копирует в буфер)
+  const handleInvite = () => {
+    if (!groupId) return;
+    const link = buildInviteLink(groupId);
+    const text = `Присоединяйся к группе расходов «${group.name}»!`;
+    shareLink(link, text);
+    // Если нет Telegram SDK — показываем подтверждение копирования
+    const hasTg = !!(window as any).Telegram?.WebApp;
+    if (!hasTg) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
 
   return (
@@ -50,6 +87,29 @@ export const InviteMembersPage = () => {
       />
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
+        {/* Кнопка приглашения по ссылке — открывает нативный TG share или копирует */}
+        <div style={{ padding: '12px 16px 4px' }}>
+          <div
+            onClick={handleInvite}
+            style={{
+              background: C.card, borderRadius: 12, padding: '13px 16px',
+              display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+              border: `1px solid ${C.blue}20`,
+            }}
+          >
+            <div style={{
+              width: 36, height: 36, borderRadius: 18, background: C.blue,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0,
+            }}>📤</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: C.blue, fontWeight: 600, fontSize: 15 }}>Пригласить по ссылке</div>
+              <div style={{ color: C.hint, fontSize: 12, marginTop: 2 }}>
+                {copied ? '✓ Ссылка скопирована!' : 'Поделиться через Telegram'}
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div style={{ padding: '10px 16px' }}>
           <div style={{ background: C.card, borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ color: C.hint }}>🔍</span>
@@ -65,7 +125,7 @@ export const InviteMembersPage = () => {
         <SLabel>В группе</SLabel>
         <Card>
           {group.members.map((m, i) => {
-            const name = m.user.username || `User ${m.userId}`;
+            const name = displayName(m.user.firstName, m.user.username, m.userId);
             const isMe = m.userId === user?.id;
             return (
               <div key={m.id} style={{
@@ -74,13 +134,16 @@ export const InviteMembersPage = () => {
               }}>
                 <Av m={{ initials: initials(name), color: avatarColor(m.userId) }} size={36} />
                 <div style={{ flex: 1, fontWeight: 500 }}>{name}{isMe ? ' (вы)' : ''}</div>
-                {/* Создателя группы (себя) нельзя удалить */}
+                {/* Создателя (себя) нельзя удалить */}
                 {!isMe && (
-                  <button style={{
-                    background: C.red, border: 'none', borderRadius: '50%', width: 24, height: 24,
-                    color: 'white', fontSize: 16, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>−</button>
+                  <button
+                    onClick={() => removeMember(m.userId)}
+                    style={{
+                      background: C.red, border: 'none', borderRadius: '50%', width: 24, height: 24,
+                      color: 'white', fontSize: 16, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >−</button>
                 )}
               </div>
             );
@@ -95,7 +158,7 @@ export const InviteMembersPage = () => {
             </div>
           )}
           {available.map((u, i) => {
-            const name = u.username || `User ${u.id}`;
+            const name = displayName(u.firstName, u.username, u.id);
             return (
               <div key={u.id} onClick={() => addMember(u.id)} style={{
                 padding: '10px 16px', borderBottom: i < available.length - 1 ? `0.5px solid ${C.border}` : 'none',
