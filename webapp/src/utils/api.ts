@@ -50,6 +50,7 @@ export interface DbUser {
   id: number;
   telegramId: number;
   username?: string | null;
+  firstName?: string | null;
 }
 
 // Интерфейс для полных данных группы с участниками (возвращает GET /groups/:id).
@@ -58,7 +59,7 @@ export interface GroupDetail {
   name: string;
   icon: string | null;
   createdAt: string;
-  members: Array<{ id: string; userId: number; user: { id: number; username: string | null } }>;
+  members: Array<{ id: string; userId: number; user: { id: number; username: string | null; firstName: string | null } }>;
 }
 
 // AppUser — полная модель пользователя, возвращаемая GET /users.
@@ -66,6 +67,7 @@ export interface AppUser {
   id: number;
   telegramId: number;
   username: string | null;
+  firstName: string | null;
 }
 
 export const usersApi = {
@@ -81,6 +83,10 @@ export const groupsApi = {
   getById: (id: string): Promise<GroupDetail> => request<GroupDetail>(`/groups/${id}`),
   addMember: (groupId: string, userId: number): Promise<unknown> =>
     request(`/groups/${groupId}/members`, { method: 'POST', body: JSON.stringify({ userId }) }),
+  removeMember: (groupId: string, userId: number): Promise<unknown> =>
+    request(`/groups/${groupId}/members/${userId}`, { method: 'DELETE' }),
+  update: (groupId: string, data: { name?: string; icon?: string }): Promise<unknown> =>
+    request(`/groups/${groupId}`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
 
 export const expensesApi = {
