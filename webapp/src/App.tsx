@@ -1,31 +1,51 @@
 // Корневой компонент. Настраивает маршрутизацию для всех 10 экранов дизайна.
-// AppRoot и ThemeProvider из @telegram-apps/telegram-ui убраны —
-// дизайн теперь реализован через кастомные компоненты с инлайн-стилями.
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { UserProvider } from './context/UserContext';
+import { useUser } from './context/UserContext';
+import { groupsApi } from './utils/api';
+import { getStartParam } from './hooks';
 import {
-  HomePage,
-  GroupPage,
-  AddExpensePage,
-  CreateGroupPage,
-  InviteMembersPage,
-  SplitModePage,
-  BalancePage,
-  CloseGroupPage,
-  DisputePage,
-  QuickAddPage,
+  HomePage, GroupPage, AddExpensePage, CreateGroupPage,
+  InviteMembersPage, SplitModePage, BalancePage,
+  CloseGroupPage, DisputePage, QuickAddPage,
 } from './pages';
 
-// SAFE_TOP — отступ сверху для Dynamic Island / строки состояния на iOS.
-// В production можно заменить на Telegram.WebApp.safeAreaInset.top.
+// SAFE_TOP — отступ сверху для строки состояния / Dynamic Island на iOS.
 const SAFE_TOP = 62;
+
+// Обрабатывает deep link при открытии приложения через invite-ссылку.
+// Параметр "join_GROUPID" добавляет текущего пользователя в группу и перенаправляет.
+function StartParamHandler() {
+  const navigate = useNavigate();
+  const { user } = useUser();
+
+  useEffect(() => {
+    if (!user) return;
+    const param = getStartParam();
+    if (param?.startsWith('join_')) {
+      const groupId = param.slice(5);
+      groupsApi.addMember(groupId, user.id)
+        .then(() => navigate(`/group/${groupId}`, { replace: true }))
+        .catch(() => {}); // группа может не существовать — тихо игнорируем
+    }
+    // Fallback для dev-среды: ?join=GROUPID в URL
+    const urlJoin = new URLSearchParams(window.location.search).get('join');
+    if (urlJoin) {
+      groupsApi.addMember(urlJoin, user.id)
+        .then(() => navigate(`/group/${urlJoin}`, { replace: true }))
+        .catch(() => {});
+    }
+  }, [user?.id]);
+
+  return null;
+}
 
 function App() {
   return (
     <UserProvider>
       <BrowserRouter>
-        {/* Обёртка задаёт фон, шрифт и безопасную зону сверху для всего приложения */}
         <div style={{
           height: '100dvh',
           paddingTop: SAFE_TOP,
@@ -36,6 +56,7 @@ function App() {
           overflow: 'hidden',
           position: 'relative',
         }}>
+          <StartParamHandler />
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/create-group" element={<CreateGroupPage />} />
