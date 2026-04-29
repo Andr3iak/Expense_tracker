@@ -6,10 +6,9 @@ import { join } from 'path';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
-    // Prisma 7 убрал url из schema.prisma — соединение передаётся через driver adapter.
-    // __dirname в prod = backend/dist/src/prisma/, три уровня вверх до корня backend/.
-    const dbPath = join(__dirname, '..', '..', '..', 'dev.db');
-    const adapter = new PrismaBetterSqlite3({ url: dbPath });
+    
+    const dbPath = join(process.cwd(), 'dev.db');
+    const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
     super({ adapter });
   }
 
