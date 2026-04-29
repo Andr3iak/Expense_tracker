@@ -1,4 +1,4 @@
-// API-слой для связи с бэкендом. Здесь заменены все 'any' на конкретные типы.
+// API-слой: все запросы к бэкенду. Типы соответствуют ответам NestJS-контроллеров.
 const API_BASE = '/api';
 // Общий тип ошибки от сервера
 
@@ -50,6 +50,7 @@ export interface DbUser {
   id: number;
   telegramId: number;
   username?: string | null;
+  firstName?: string | null;
 }
 
 // Интерфейс для полных данных группы с участниками (возвращает GET /groups/:id).
@@ -58,12 +59,21 @@ export interface GroupDetail {
   name: string;
   icon: string | null;
   createdAt: string;
-  members: Array<{ id: string; userId: number; user: { id: number; username: string | null } }>;
+  members: Array<{ id: string; userId: number; user: { id: number; username: string | null; firstName: string | null } }>;
+}
+
+// AppUser — полная модель пользователя, возвращаемая GET /users.
+export interface AppUser {
+  id: number;
+  telegramId: number;
+  username: string | null;
+  firstName: string | null;
 }
 
 export const usersApi = {
   upsert: (data: { telegramId: number; username?: string; firstName?: string }): Promise<DbUser> =>
     request<DbUser>('/users/upsert', { method: 'POST', body: JSON.stringify(data) }),
+  getAll: (): Promise<AppUser[]> => request<AppUser[]>('/users'),
 };
 
 export const groupsApi = {
@@ -71,6 +81,12 @@ export const groupsApi = {
   create: (data: { name: string; icon?: string; userId: number }): Promise<Group> =>
     request<Group>('/groups', { method: 'POST', body: JSON.stringify(data) }),
   getById: (id: string): Promise<GroupDetail> => request<GroupDetail>(`/groups/${id}`),
+  addMember: (groupId: string, userId: number): Promise<unknown> =>
+    request(`/groups/${groupId}/members`, { method: 'POST', body: JSON.stringify({ userId }) }),
+  removeMember: (groupId: string, userId: number): Promise<unknown> =>
+    request(`/groups/${groupId}/members/${userId}`, { method: 'DELETE' }),
+  update: (groupId: string, data: { name?: string; icon?: string }): Promise<unknown> =>
+    request(`/groups/${groupId}`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
 
 export const expensesApi = {

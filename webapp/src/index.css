@@ -1,23 +1,43 @@
-/* src/index.css */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
-  --tg-bg-color: #ffffff;
-  --tg-text-color: #000000;
-  --tg-hint-color: #999999;
-  --tg-link-color: #2aabee;
-  --tg-button-color: #2aabee;
-  --tg-button-text-color: #ffffff;
+  --blue:      #2AABEE;
+  --blue-dark: #1A8FC8;
+  --green:     #34C759;
+  --red:       #FF3B30;
+  --orange:    #FF9500;
+  --bg:        #EFEFF4;
+  --card:      #FFFFFF;
+  --sep:       rgba(0,0,0,0.09);
+  --text:      #000000;
+  --hint:      #8E8E93;
+  --border:    #E5E5EA;
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  background-color: var(--tg-bg-color);
-  color: var(--tg-text-color);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  color: var(--text);
 }
 
-/* Переопределяем для компонентов telegram-ui (они сами используют свои переменные, но можно дополнить) */
-.tgui-button--filled {
-  background-color: var(--tg-button-color) !important;
-  color: var(--tg-button-text-color) !important;
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
+
+::-webkit-scrollbar { display: none; }
+* { -ms-overflow-style: none; scrollbar-width: none; -webkit-tap-highlight-color: transparent; }
+
+textarea { resize: none; }
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sheet-enter  { animation: slideUp 0.3s cubic-bezier(0.4,0,0.2,1) both; }
+.overlay-enter { animation: fadeIn 0.2s ease both; }

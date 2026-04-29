@@ -5,13 +5,20 @@ import { PrismaService } from '../prisma/prisma.service';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async upsertUser(telegramId: number, username?: string) {
-    // Telegram ID может превышать Number.MAX_SAFE_INTEGER, поэтому в схеме BigInt.
-    // JS-число безопасно конвертируется в BigInt для Prisma-запроса.
+  async upsertUser(telegramId: number | string, username?: string) {
+    
+    const tgId = BigInt(telegramId);
+
     return this.prisma.user.upsert({
-      where: { telegramId: BigInt(telegramId) },
+      where: { telegramId: tgId },
       update: { username: username ?? null },
-      create: { telegramId: BigInt(telegramId), username: username ?? null },
+      create: { telegramId: tgId, username: username ?? null },
+    });
+  }
+
+  async findByTelegramId(telegramId: number | string) {
+    return this.prisma.user.findUnique({
+      where: { telegramId: BigInt(telegramId) },
     });
   }
 }
