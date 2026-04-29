@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -21,7 +21,11 @@ export class ExpensesService {
       amount: exp.amount,
       description: exp.description,
       paidBy: exp.paidBy,
-      participants: exp.participants.map((p) => p.userId),
+      paidByName: exp.paidByUser.username ?? `User ${exp.paidBy}`,
+      participants: exp.participants.map((p) => ({
+        userId: p.userId,
+        username: p.user.username,
+      })),
       date: exp.date.toISOString(),
     }));
   }
@@ -33,7 +37,23 @@ export class ExpensesService {
     paidBy: number,
     participantIds: number[],
   ) {
-    // Гарантируем, что плательщик входит в список участников, даже если фронтенд его не передал.
+    if (!amount || amount <= 0) throw new BadRequestException('amount must be positive');
+    if (!description?.trim()) throw new BadRequestException('description is required');
+    if (!paidBy) throw new BadRequestException('paidBy is required');
+
+    // Проверяем, что группа существует
+    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
+    if (!group) throw new NotFoundException('Group not found');
+
+    // Проверяем, что плательщик — участник группы
+    const payerMembership = await this.prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId: paidBy } },
+    });
+    if (!payerMembership) {
+      throw new BadRequestException('paidBy user is not a member of this group');
+    }
+
+    // Плательщик всегда входит в участников расхода
     const allParticipants = [...new Set([...participantIds, paidBy])];
 
     const expense = await this.prisma.expense.create({
@@ -46,7 +66,10 @@ export class ExpensesService {
           create: allParticipants.map((userId) => ({ userId })),
         },
       },
-      include: { participants: true },
+      include: {
+        participants: { include: { user: true } },
+        paidByUser: true,
+      },
     });
 
     return {
@@ -55,7 +78,11 @@ export class ExpensesService {
       amount: expense.amount,
       description: expense.description,
       paidBy: expense.paidBy,
-      participants: expense.participants.map((p) => p.userId),
+      paidByName: expense.paidByUser.username ?? `User ${expense.paidBy}`,
+      participants: expense.participants.map((p) => ({
+        userId: p.userId,
+        username: p.user.username,
+      })),
       date: expense.date.toISOString(),
     };
   }
