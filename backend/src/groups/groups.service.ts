@@ -11,9 +11,7 @@ export class GroupsService {
     const memberships = await this.prisma.groupMember.findMany({
       where: { userId },
       include: {
-        group: {
-          include: { _count: { select: { members: true } } },
-        },
+        group: { include: { _count: { select: { members: true } } } },
       },
     });
 
@@ -33,9 +31,7 @@ export class GroupsService {
     const memberships = await this.prisma.groupMember.findMany({
       where: { userId },
       include: {
-        group: {
-          include: { _count: { select: { members: true } } },
-        },
+        group: { include: { _count: { select: { members: true } } } },
       },
     });
 
@@ -128,6 +124,27 @@ export class GroupsService {
     };
   }
 
+  // Полное удаление группы со всеми данными
+  async deleteGroup(groupId: string, userId: number) {
+    const membership = await this.prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (!membership) throw new ForbiddenException('You are not a member of this group');
+
+    // Сначала удаляем expense_participants, затем expenses, затем группу
+    const expenses = await this.prisma.expense.findMany({ where: { groupId } });
+    const expenseIds = expenses.map((e) => e.id);
+
+    await this.prisma.expenseParticipant.deleteMany({
+      where: { expenseId: { in: expenseIds } },
+    });
+    await this.prisma.expense.deleteMany({ where: { groupId } });
+    await this.prisma.groupMember.deleteMany({ where: { groupId } });
+    await this.prisma.group.delete({ where: { id: groupId } });
+
+    return { id: groupId, deleted: true };
+  }
+
   async archiveGroup(groupId: string, userId: number) {
     const membership = await this.prisma.groupMember.findUnique({
       where: { groupId_userId: { groupId, userId } },
@@ -174,7 +191,7 @@ export class GroupsService {
 
   async removeMember(groupId: string, userId: number) {
     await this.prisma.groupMember.deleteMany({ where: { groupId, userId } });
-    return { groupId, userId };
+    return { groupId, userId, removed: true };
   }
 
   async addMemberByTelegramId(groupId: string, telegramId: number | string, username?: string) {

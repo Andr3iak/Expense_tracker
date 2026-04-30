@@ -40,6 +40,13 @@ export class GroupsController {
     return this.groupsService.updateGroup(groupId, body.userId, { name: body.name, icon: body.icon });
   }
 
+  // Удалить группу полностью (каскадно удаляет расходы и участников)
+  @Delete(':id')
+  deleteGroup(@Param('id') groupId: string, @Body() body: { userId: number }) {
+    if (!body.userId) throw new BadRequestException('userId is required');
+    return this.groupsService.deleteGroup(groupId, body.userId);
+  }
+
   @Patch(':id/archive')
   archive(@Param('id') groupId: string, @Body() body: { userId: number }) {
     if (!body.userId) throw new BadRequestException('userId is required');
@@ -58,7 +65,7 @@ export class GroupsController {
     return this.groupsService.addMember(groupId, body.userId);
   }
 
-  // Удаление участника — нужен InviteMembersPage
+  // Удалить участника из группы
   @Delete(':id/members/:userId')
   removeMember(@Param('id') groupId: string, @Param('userId') userId: string) {
     return this.groupsService.removeMember(groupId, parseInt(userId, 10));
