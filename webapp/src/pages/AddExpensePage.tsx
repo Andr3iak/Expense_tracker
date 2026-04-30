@@ -1,6 +1,3 @@
-// Экран добавления расхода. Собирает сумму, описание и плательщика,
-// затем передаёт данные на экран SplitMode через router state.
-
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { NavBar, Card, SLabel, Av, Btn, C } from '../components/ui';
@@ -16,7 +13,6 @@ export const AddExpensePage = () => {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [desc, setDesc] = useState('');
-  // paidBy — userId плательщика, по умолчанию первый участник группы
   const [paidBy, setPaidBy] = useState<number | null>(null);
 
   useEffect(() => {
@@ -27,28 +23,27 @@ export const AddExpensePage = () => {
     });
   }, [groupId]);
 
-  if (!group) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
-
   const ok = !!amount && parseFloat(amount) > 0 && !!description.trim();
 
   const handleNext = useCallback(() => {
     if (!ok || !paidBy) return;
     hapticImpact('light');
-    // Данные расхода передаются через state, чтобы не загрязнять URL
     navigate(`/group/${groupId}/split`, {
       state: { amount: parseFloat(amount), description: description.trim(), paidBy },
     });
-  }, [ok, paidBy, amount, description, groupId]);
+  }, [ok, paidBy, amount, description, groupId, navigate]);
 
+  // Хуки ВСЕГДА вызываются до любого return — это обязательное правило React
   useBackButton(() => navigate(`/group/${groupId}`));
   useMainButton('Далее →', handleNext, ok);
+
+  if (!group) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: C.bg }}>
       <NavBar title="Добавление расхода" onBack={() => navigate(`/group/${groupId}`)} />
 
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '16px 0' }}>
-        {/* Поля: сумма, за что, описание в одной карточке */}
         <Card>
           <div style={{ padding: '14px 16px', borderBottom: `0.5px solid ${C.border}` }}>
             <div style={{ fontSize: 11, color: C.hint, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>
@@ -105,7 +100,6 @@ export const AddExpensePage = () => {
               }}>
                 <Av m={{ initials: initials(name), color: avatarColor(m.userId) }} size={34} />
                 <div style={{ flex: 1, fontWeight: 500 }}>{name}</div>
-                {/* Radio-индикатор выбора плательщика */}
                 <div style={{
                   width: 22, height: 22, borderRadius: 11,
                   border: `2px solid ${isSelected ? C.blue : C.border}`,
@@ -119,17 +113,7 @@ export const AddExpensePage = () => {
           })}
         </Card>
 
-        <div style={{ padding: '6px 16px' }}>
-          <div style={{
-            background: C.card, borderRadius: 12, padding: '13px 16px',
-            display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: C.blue,
-          }}>
-            <span style={{ fontSize: 20 }}>📎</span>
-            <span style={{ fontWeight: 500, fontSize: 15 }}>Прикрепить чек</span>
-          </div>
-        </div>
-
-        <div style={{ padding: '12px 16px' }}>
+        <div style={{ padding: 16 }}>
           <Btn label="Далее →" onTap={handleNext} disabled={!ok} />
         </div>
       </div>
