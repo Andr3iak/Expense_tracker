@@ -6,9 +6,7 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async upsertUser(telegramId: number | string, username?: string) {
-    
     const tgId = BigInt(telegramId);
-
     return this.prisma.user.upsert({
       where: { telegramId: tgId },
       update: { username: username ?? null },
@@ -19,6 +17,13 @@ export class UsersService {
   async findByTelegramId(telegramId: number | string) {
     return this.prisma.user.findUnique({
       where: { telegramId: BigInt(telegramId) },
+    });
+  }
+
+  // Все пользователи приложения — для страницы приглашения участников
+  async getAllUsers() {
+    return this.prisma.user.findMany({
+      orderBy: { id: 'asc' },
     });
   }
 }
