@@ -29,6 +29,8 @@ export interface Expense {
 
 export interface BalanceInfo {
   total: number;
+  // debts — для совместимости с BalancePage и CloseGroupPage
+  debts: Array<{ userId: number; amount: number; userName: string }>;
   balances: Array<{ userId: number; balance: number; userName: string }>;
   transactions: Array<{
     from: number;
@@ -45,6 +47,27 @@ export interface DbUser {
   username?: string | null;
 }
 
+// AppUser — пользователь из общего списка (для InviteMembersPage)
+export interface AppUser {
+  id: number;
+  telegramId: number;
+  username: string | null;
+  firstName: string | null;
+}
+
+// GroupMember — участник группы. Содержит как плоские поля (id, userId),
+// так и вложенный user-объект — для совместимости со всеми страницами.
+export interface GroupMember {
+  id: number;           // внутренний id пользователя (используется как key)
+  telegramId: number;
+  username: string | null;
+  userId: number;       // дублирует id — для страниц которые обращаются к m.userId
+  user: {
+    firstName: string | null;
+    username: string | null;
+  };
+}
+
 export interface GroupDetail {
   id: string;
   name: string;
@@ -53,7 +76,7 @@ export interface GroupDetail {
   lastActivity: string;
   archived: boolean;
   archivedAt: string | null;
-  members: Array<{ id: number; telegramId: number; username: string | null }>;
+  members: GroupMember[];
 }
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -74,6 +97,10 @@ export const usersApi = {
 
   getByTelegramId: (telegramId: number | string): Promise<DbUser> =>
     request<DbUser>(`/users/by-telegram/${telegramId}`),
+
+  // Нужен InviteMembersPage для показа всех пользователей приложения
+  getAll: (): Promise<AppUser[]> =>
+    request<AppUser[]>('/users'),
 };
 
 export const groupsApi = {
@@ -89,15 +116,12 @@ export const groupsApi = {
   getById: (id: string): Promise<GroupDetail> =>
     request<GroupDetail>(`/groups/${id}`),
 
-  // Редактировать название и/или иконку
   update: (id: string, data: { name?: string; icon?: string; userId: number }): Promise<Group> =>
     request<Group>(`/groups/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
-  // Архивировать группу
   archive: (id: string, userId: number): Promise<{ id: string; archived: boolean }> =>
     request(`/groups/${id}/archive`, { method: 'PATCH', body: JSON.stringify({ userId }) }),
 
-  // Восстановить из архива
   unarchive: (id: string, userId: number): Promise<{ id: string; archived: boolean }> =>
     request(`/groups/${id}/unarchive`, { method: 'PATCH', body: JSON.stringify({ userId }) }),
 
@@ -106,6 +130,12 @@ export const groupsApi = {
 
   getInvitePreview: (groupId: string): Promise<GroupDetail> =>
     request<GroupDetail>(`/groups/${groupId}/invite-preview`),
+
+  addMember: (groupId: string, userId: number): Promise<void> =>
+    request(`/groups/${groupId}/members`, { method: 'POST', body: JSON.stringify({ userId }) }),
+
+  removeMember: (groupId: string, userId: number): Promise<void> =>
+    request(`/groups/${groupId}/members/${userId}`, { method: 'DELETE' }),
 };
 
 export const expensesApi = {
