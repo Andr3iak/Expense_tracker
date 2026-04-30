@@ -9,39 +9,47 @@ export class GroupsService {
     if (!userId || isNaN(userId)) return [];
 
     const memberships = await this.prisma.groupMember.findMany({
-      where: { userId, group: { archived: false } },
+      where: { userId },
       include: {
-        group: { include: { _count: { select: { members: true } } } },
+        group: {
+          include: { _count: { select: { members: true } } },
+        },
       },
     });
 
-    return memberships.map((m) => ({
-      id: m.group.id,
-      name: m.group.name,
-      icon: m.group.icon ?? '📁',
-      membersCount: m.group._count.members,
-      lastActivity: m.group.createdAt,
-      balance: 0,
-    }));
+    return memberships
+      .filter((m) => !m.group.archived)
+      .map((m) => ({
+        id: m.group.id,
+        name: m.group.name,
+        icon: m.group.icon ?? '📁',
+        membersCount: m.group._count.members,
+        lastActivity: m.group.createdAt,
+        balance: 0,
+      }));
   }
 
   async getArchivedGroupsByUser(userId: number) {
     const memberships = await this.prisma.groupMember.findMany({
-      where: { userId, group: { archived: true } },
+      where: { userId },
       include: {
-        group: { include: { _count: { select: { members: true } } } },
+        group: {
+          include: { _count: { select: { members: true } } },
+        },
       },
     });
 
-    return memberships.map((m) => ({
-      id: m.group.id,
-      name: m.group.name,
-      icon: m.group.icon ?? '📁',
-      membersCount: m.group._count.members,
-      lastActivity: m.group.createdAt,
-      archivedAt: m.group.archivedAt,
-      balance: 0,
-    }));
+    return memberships
+      .filter((m) => m.group.archived)
+      .map((m) => ({
+        id: m.group.id,
+        name: m.group.name,
+        icon: m.group.icon ?? '📁',
+        membersCount: m.group._count.members,
+        lastActivity: m.group.createdAt,
+        archivedAt: m.group.archivedAt,
+        balance: 0,
+      }));
   }
 
   async createGroup(name: string, icon: string | undefined, userId: number) {
@@ -82,15 +90,13 @@ export class GroupsService {
       lastActivity: group.createdAt,
       archived: group.archived,
       archivedAt: group.archivedAt,
-      // Возвращаем оба формата: плоские поля (id, userId) и вложенный user.*
-      // Это нужно для совместимости с AddExpensePage, QuickAddPage, SplitModePage, InviteMembersPage
       members: group.members.map((m) => ({
         id: m.user.id,
         telegramId: Number(m.user.telegramId),
         username: m.user.username,
-        userId: m.user.id,           // алиас для страниц которые используют m.userId
+        userId: m.user.id,
         user: {
-          firstName: m.user.username, // в БД нет firstName — используем username как fallback
+          firstName: m.user.username,
           username: m.user.username,
         },
       })),
@@ -133,7 +139,7 @@ export class GroupsService {
       data: { archived: true, archivedAt: new Date() },
     });
 
-    return { id: group.id, archived: true, archivedAt: group.archivedAt };
+    return { id: group.id, archived: group.archived, archivedAt: group.archivedAt };
   }
 
   async unarchiveGroup(groupId: string, userId: number) {
@@ -147,7 +153,7 @@ export class GroupsService {
       data: { archived: false, archivedAt: null },
     });
 
-    return { id: group.id, archived: false };
+    return { id: group.id, archived: group.archived };
   }
 
   async addMember(groupId: string, userId: number) {
@@ -167,9 +173,7 @@ export class GroupsService {
   }
 
   async removeMember(groupId: string, userId: number) {
-    await this.prisma.groupMember.deleteMany({
-      where: { groupId, userId },
-    });
+    await this.prisma.groupMember.deleteMany({ where: { groupId, userId } });
     return { groupId, userId };
   }
 
