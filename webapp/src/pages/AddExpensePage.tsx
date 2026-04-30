@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { NavBar, Card, SLabel, Av, Btn, C } from '../components/ui';
-import { groupsApi } from '../utils/api';
-import type { GroupDetail } from '../utils/api';
+import { groupsApi, expensesApi } from '../utils/api';
+import type { GroupDetail, Category } from '../utils/api';
 import { avatarColor, initials } from '../components/ui';
 import { useBackButton, useMainButton, hapticImpact } from '../hooks';
 
@@ -10,15 +10,21 @@ export const AddExpensePage = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const [group, setGroup] = useState<GroupDetail | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [desc, setDesc] = useState('');
+  const [category, setCategory] = useState('other');
   const [paidBy, setPaidBy] = useState<number | null>(null);
 
   useEffect(() => {
     if (!groupId) return;
-    groupsApi.getById(groupId).then((g) => {
+    Promise.all([
+      groupsApi.getById(groupId),
+      expensesApi.getCategories(),
+    ]).then(([g, cats]) => {
       setGroup(g);
+      setCategories(cats);
       if (g.members.length > 0) setPaidBy(g.members[0].userId);
     });
   }, [groupId]);
@@ -29,11 +35,10 @@ export const AddExpensePage = () => {
     if (!ok || !paidBy) return;
     hapticImpact('light');
     navigate(`/group/${groupId}/split`, {
-      state: { amount: parseFloat(amount), description: description.trim(), paidBy },
+      state: { amount: parseFloat(amount), description: description.trim(), category, paidBy },
     });
-  }, [ok, paidBy, amount, description, groupId, navigate]);
+  }, [ok, paidBy, amount, description, category, groupId, navigate]);
 
-  // Хуки ВСЕГДА вызываются до любого return — это обязательное правило React
   useBackButton(() => navigate(`/group/${groupId}`));
   useMainButton('Далее →', handleNext, ok);
 
@@ -44,6 +49,7 @@ export const AddExpensePage = () => {
       <NavBar title="Добавление расхода" onBack={() => navigate(`/group/${groupId}`)} />
 
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '16px 0' }}>
+        {/* Сумма и описание */}
         <Card>
           <div style={{ padding: '14px 16px', borderBottom: `0.5px solid ${C.border}` }}>
             <div style={{ fontSize: 11, color: C.hint, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>
@@ -52,41 +58,47 @@ export const AddExpensePage = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 34, color: C.hint, fontWeight: 200 }}>₽</span>
               <input
-                type="number"
-                placeholder="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                autoFocus
-                style={{
-                  flex: 1, border: 'none', outline: 'none',
-                  fontSize: 40, fontWeight: 200, color: amount ? C.text : C.hint,
-                  background: 'none', fontFamily: 'inherit',
-                }}
+                type="number" placeholder="0" value={amount}
+                onChange={(e) => setAmount(e.target.value)} autoFocus
+                style={{ flex: 1, border: 'none', outline: 'none', fontSize: 40, fontWeight: 200, color: amount ? C.text : C.hint, background: 'none', fontFamily: 'inherit' }}
               />
             </div>
           </div>
           <div style={{ borderBottom: `0.5px solid ${C.border}` }}>
             <input
-              placeholder="За что"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              style={{
-                width: '100%', border: 'none', outline: 'none',
-                padding: '12px 16px', fontSize: 16, background: 'none', color: C.text, fontFamily: 'inherit',
-              }}
+              placeholder="За что" value={description} onChange={(e) => setDescription(e.target.value)}
+              style={{ width: '100%', border: 'none', outline: 'none', padding: '12px 16px', fontSize: 16, background: 'none', color: C.text, fontFamily: 'inherit' }}
             />
           </div>
           <input
-            placeholder="Описание (необязательно)"
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            style={{
-              width: '100%', border: 'none', outline: 'none',
-              padding: '12px 16px', fontSize: 16, background: 'none', color: C.text, fontFamily: 'inherit',
-            }}
+            placeholder="Описание (необязательно)" value={desc} onChange={(e) => setDesc(e.target.value)}
+            style={{ width: '100%', border: 'none', outline: 'none', padding: '12px 16px', fontSize: 16, background: 'none', color: C.text, fontFamily: 'inherit' }}
           />
         </Card>
 
+        {/* Категории */}
+        <SLabel>Категория</SLabel>
+        <div style={{ padding: '0 16px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {categories.map((cat) => (
+            <div
+              key={cat.id}
+              onClick={() => setCategory(cat.id)}
+              style={{
+                background: category === cat.id ? C.blue : C.card,
+                color: category === cat.id ? 'white' : C.text,
+                border: `1px solid ${category === cat.id ? C.blue : C.border}`,
+                borderRadius: 20, padding: '7px 14px', fontSize: 14,
+                cursor: 'pointer', transition: 'all 0.15s',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <span>{cat.emoji}</span>
+              <span>{cat.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Кто заплатил */}
         <SLabel>Кто заплатил</SLabel>
         <Card>
           {group.members.map((m, i) => {

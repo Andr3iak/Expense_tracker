@@ -15,12 +15,12 @@ const initMockData = () => {
   if (!localStorage.getItem(EXPENSES_KEY)) {
     const defaultExpenses: Expense[] = [
       {
-        id: 'e1', amount: 1500, description: 'Бензин', paidBy: 99999999,
+        id: 'e1', amount: 1500, description: 'Бензин', category: 'transport', paidBy: 99999999,
         participants: [{ userId: 99999999, username: 'test_user' }, { userId: 12345678, username: null }],
         groupId: '1', date: new Date().toISOString(),
       },
       {
-        id: 'e2', amount: 3200, description: 'Ужин в кафе', paidBy: 12345678,
+        id: 'e2', amount: 3200, description: 'Ужин в кафе', category: 'food', paidBy: 12345678,
         participants: [{ userId: 99999999, username: 'test_user' }, { userId: 12345678, username: null }],
         groupId: '1', date: new Date().toISOString(),
       },
@@ -56,7 +56,10 @@ export const mockExpensesApi = {
 
   create: (groupId: string, data: Omit<Expense, 'id' | 'groupId' | 'date'>): Promise<Expense> => {
     const expenses = getExpenses();
-    const newExpense: Expense = { id: Date.now().toString(), groupId, date: new Date().toISOString(), ...data };
+    const newExpense: Expense = {
+      id: Date.now().toString(), groupId,
+      date: new Date().toISOString(), ...data,
+    };
     expenses.push(newExpense);
     saveExpenses(expenses);
     return Promise.resolve(newExpense);
@@ -74,8 +77,7 @@ export const mockBalancesApi = {
       const perPerson = exp.amount / exp.participants.length;
       userBalances[exp.paidBy] = (userBalances[exp.paidBy] || 0) + exp.amount;
       exp.participants.forEach((p) => {
-        const uid = typeof p === 'number' ? p : p.userId;
-        userBalances[uid] = (userBalances[uid] || 0) - perPerson;
+        userBalances[p.userId] = (userBalances[p.userId] || 0) - perPerson;
       });
     });
 
@@ -83,6 +85,10 @@ export const mockBalancesApi = {
       .filter(([, balance]) => Math.abs(balance) > 0.01)
       .map(([userId, balance]) => ({ userId: Number(userId), amount: balance, userName: `User ${userId}` }));
 
-    return Promise.resolve({ total, debts, balances: debts.map(d => ({ userId: d.userId, balance: d.amount, userName: d.userName })), transactions: [] });
+    return Promise.resolve({
+      total, debts,
+      balances: debts.map((d) => ({ userId: d.userId, balance: d.amount, userName: d.userName })),
+      transactions: [],
+    });
   },
 };

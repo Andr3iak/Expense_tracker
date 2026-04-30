@@ -10,6 +10,7 @@ interface ExpenseState {
   amount: number;
   description: string;
   paidBy: number;
+  category: string;
 }
 
 export const SplitModePage = () => {

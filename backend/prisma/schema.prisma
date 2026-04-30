@@ -24,7 +24,6 @@ model Group {
   members    GroupMember[]
   expenses   Expense[]
   createdAt  DateTime      @default(now())
-  // Архив: если true — группа скрыта с главного экрана
   archived   Boolean       @default(false)
   archivedAt DateTime?
 
@@ -36,6 +35,7 @@ model Expense {
   groupId      String
   amount       Float
   description  String
+  category     String               @default("other")
   paidBy       Int
   participants ExpenseParticipant[]
   date         DateTime             @default(now())
