@@ -15,7 +15,6 @@ export class BalancesService {
     });
 
     let total = 0;
-    // net[userId] > 0 → пользователю должны; < 0 → пользователь должен
     const net: Record<number, number> = {};
     const userNames: Record<number, string> = {};
 
@@ -35,8 +34,7 @@ export class BalancesService {
       }
     }
 
-    // Алгоритм минимизации транзакций: разбиваем на должников и кредиторов,
-    // жадно закрываем долги.
+    // Алгоритм минимизации транзакций
     const creditors: { userId: number; amount: number }[] = [];
     const debtors: { userId: number; amount: number }[] = [];
 
@@ -47,17 +45,16 @@ export class BalancesService {
       else if (rounded < -0.01) debtors.push({ userId, amount: Math.abs(rounded) });
     }
 
-    // Транзакции вида: debtor должен заплатить creditor сумму amount
-    const transactions: { from: number; to: number; amount: number; fromName: string; toName: string }[] = [];
+    const transactions: {
+      from: number; to: number; amount: number; fromName: string; toName: string;
+    }[] = [];
 
     let ci = 0;
     let di = 0;
-
     while (ci < creditors.length && di < debtors.length) {
       const cred = creditors[ci];
       const debt = debtors[di];
       const settleAmount = Math.min(cred.amount, debt.amount);
-
       transactions.push({
         from: debt.userId,
         to: cred.userId,
@@ -65,15 +62,12 @@ export class BalancesService {
         fromName: userNames[debt.userId],
         toName: userNames[cred.userId],
       });
-
       cred.amount -= settleAmount;
       debt.amount -= settleAmount;
-
       if (cred.amount < 0.01) ci++;
       if (debt.amount < 0.01) di++;
     }
 
-    // Сырые балансы по каждому участнику (для отображения в UI)
     const balances = Object.entries(net)
       .map(([userId, balance]) => ({
         userId: Number(userId),
@@ -82,10 +76,17 @@ export class BalancesService {
       }))
       .filter((b) => Math.abs(b.balance) > 0.01);
 
+    // debts — для совместимости с BalancePage и CloseGroupPage
+    const debts = balances.map((b) => ({
+      userId: b.userId,
+      amount: b.balance,
+      userName: b.userName,
+    }));
+
     return {
       total: Math.round(total * 100) / 100,
+      debts,
       balances,
-      // transactions: кто кому сколько должен перевести для погашения всех долгов
       transactions,
     };
   }
