@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, Query, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, BadRequestException } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 
 @Controller('groups')
@@ -12,7 +12,6 @@ export class GroupsController {
     return this.groupsService.getGroupsByUser(id);
   }
 
-  // Архивные группы пользователя
   @Get('archived')
   getArchived(@Query('userId') userId: string) {
     const id = parseInt(userId, 10);
@@ -32,27 +31,21 @@ export class GroupsController {
     return this.groupsService.getGroupById(id);
   }
 
-  // Редактировать название и/или иконку
   @Patch(':id')
   update(
     @Param('id') groupId: string,
     @Body() body: { name?: string; icon?: string; userId: number },
   ) {
     if (!body.userId) throw new BadRequestException('userId is required');
-    return this.groupsService.updateGroup(groupId, body.userId, {
-      name: body.name,
-      icon: body.icon,
-    });
+    return this.groupsService.updateGroup(groupId, body.userId, { name: body.name, icon: body.icon });
   }
 
-  // Архивировать группу
   @Patch(':id/archive')
   archive(@Param('id') groupId: string, @Body() body: { userId: number }) {
     if (!body.userId) throw new BadRequestException('userId is required');
     return this.groupsService.archiveGroup(groupId, body.userId);
   }
 
-  // Восстановить из архива
   @Patch(':id/unarchive')
   unarchive(@Param('id') groupId: string, @Body() body: { userId: number }) {
     if (!body.userId) throw new BadRequestException('userId is required');
@@ -63,6 +56,12 @@ export class GroupsController {
   addMember(@Param('id') groupId: string, @Body() body: { userId: number }) {
     if (!body.userId) throw new BadRequestException('userId is required');
     return this.groupsService.addMember(groupId, body.userId);
+  }
+
+  // Удаление участника — нужен InviteMembersPage
+  @Delete(':id/members/:userId')
+  removeMember(@Param('id') groupId: string, @Param('userId') userId: string) {
+    return this.groupsService.removeMember(groupId, parseInt(userId, 10));
   }
 
   @Post(':id/join')
