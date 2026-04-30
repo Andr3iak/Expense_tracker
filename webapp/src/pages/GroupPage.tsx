@@ -14,6 +14,7 @@ export const GroupPage = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [balanceInfo, setBalanceInfo] = useState<BalanceInfo>({
     total: 0,
+    debts: [],
     balances: [],
     transactions: [],
   });
