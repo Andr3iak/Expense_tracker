@@ -9,16 +9,9 @@ export class GroupsService {
     if (!userId || isNaN(userId)) return [];
 
     const memberships = await this.prisma.groupMember.findMany({
-      where: {
-        userId,
-        group: { archived: false }, // скрываем архивные с главного экрана
-      },
+      where: { userId, group: { archived: false } },
       include: {
-        group: {
-          include: {
-            _count: { select: { members: true } },
-          },
-        },
+        group: { include: { _count: { select: { members: true } } } },
       },
     });
 
@@ -32,19 +25,11 @@ export class GroupsService {
     }));
   }
 
-  // Архивные группы — отдельный список
   async getArchivedGroupsByUser(userId: number) {
     const memberships = await this.prisma.groupMember.findMany({
-      where: {
-        userId,
-        group: { archived: true },
-      },
+      where: { userId, group: { archived: true } },
       include: {
-        group: {
-          include: {
-            _count: { select: { members: true } },
-          },
-        },
+        group: { include: { _count: { select: { members: true } } } },
       },
     });
 
@@ -64,9 +49,7 @@ export class GroupsService {
       data: {
         name,
         icon: icon ?? null,
-        members: {
-          create: { userId },
-        },
+        members: { create: { userId } },
       },
       include: { _count: { select: { members: true } } },
     });
@@ -99,17 +82,22 @@ export class GroupsService {
       lastActivity: group.createdAt,
       archived: group.archived,
       archivedAt: group.archivedAt,
+      // Возвращаем оба формата: плоские поля (id, userId) и вложенный user.*
+      // Это нужно для совместимости с AddExpensePage, QuickAddPage, SplitModePage, InviteMembersPage
       members: group.members.map((m) => ({
         id: m.user.id,
         telegramId: Number(m.user.telegramId),
         username: m.user.username,
+        userId: m.user.id,           // алиас для страниц которые используют m.userId
+        user: {
+          firstName: m.user.username, // в БД нет firstName — используем username как fallback
+          username: m.user.username,
+        },
       })),
     };
   }
 
-  // Редактирование названия и иконки группы
   async updateGroup(groupId: string, userId: number, data: { name?: string; icon?: string }) {
-    // Проверяем что пользователь состоит в группе
     const membership = await this.prisma.groupMember.findUnique({
       where: { groupId_userId: { groupId, userId } },
     });
@@ -134,7 +122,6 @@ export class GroupsService {
     };
   }
 
-  // Архивировать группу (скрыть с главного экрана)
   async archiveGroup(groupId: string, userId: number) {
     const membership = await this.prisma.groupMember.findUnique({
       where: { groupId_userId: { groupId, userId } },
@@ -149,7 +136,6 @@ export class GroupsService {
     return { id: group.id, archived: true, archivedAt: group.archivedAt };
   }
 
-  // Восстановить из архива
   async unarchiveGroup(groupId: string, userId: number) {
     const membership = await this.prisma.groupMember.findUnique({
       where: { groupId_userId: { groupId, userId } },
@@ -171,28 +157,23 @@ export class GroupsService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
-    const member = await this.prisma.groupMember.upsert({
+    await this.prisma.groupMember.upsert({
       where: { groupId_userId: { groupId, userId } },
       create: { groupId, userId },
       update: {},
     });
 
-    return {
-      groupId: member.groupId,
-      userId: member.userId,
-      user: {
-        id: user.id,
-        telegramId: Number(user.telegramId),
-        username: user.username,
-      },
-    };
+    return { groupId, userId };
   }
 
-  async addMemberByTelegramId(
-    groupId: string,
-    telegramId: number | string,
-    username?: string,
-  ) {
+  async removeMember(groupId: string, userId: number) {
+    await this.prisma.groupMember.deleteMany({
+      where: { groupId, userId },
+    });
+    return { groupId, userId };
+  }
+
+  async addMemberByTelegramId(groupId: string, telegramId: number | string, username?: string) {
     const group = await this.prisma.group.findUnique({ where: { id: groupId } });
     if (!group) throw new NotFoundException('Group not found');
 
@@ -208,14 +189,6 @@ export class GroupsService {
       update: {},
     });
 
-    return {
-      groupId,
-      userId: user.id,
-      user: {
-        id: user.id,
-        telegramId: Number(user.telegramId),
-        username: user.username,
-      },
-    };
+    return { groupId, userId: user.id };
   }
 }
