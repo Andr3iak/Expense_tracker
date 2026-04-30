@@ -19,8 +19,6 @@ export const GroupPage = () => {
     transactions: [],
   });
   const [loading, setLoading] = useState(true);
-
-  // Состояние формы редактирования
   const [showEdit, setShowEdit] = useState(false);
   const [editName, setEditName] = useState('');
   const [editIcon, setEditIcon] = useState('');
@@ -61,7 +59,7 @@ export const GroupPage = () => {
       });
       setGroup((prev) => prev ? { ...prev, name: updated.name, icon: updated.icon ?? null } : prev);
       setShowEdit(false);
-    } catch (err) {
+    } catch {
       alert('Ошибка при сохранении');
     } finally {
       setEditLoading(false);
@@ -70,13 +68,23 @@ export const GroupPage = () => {
 
   const handleArchive = async () => {
     if (!groupId || !user) return;
-    const confirm = window.confirm('Переместить группу в архив? Она исчезнет с главного экрана, но данные сохранятся.');
-    if (!confirm) return;
+    if (!window.confirm('Переместить группу в архив?')) return;
     try {
       await groupsApi.archive(groupId, user.id);
-      navigate('/'); // возвращаемся на главную
-    } catch (err) {
+      navigate('/');
+    } catch {
       alert('Ошибка при архивировании');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!groupId || !user) return;
+    if (!window.confirm('Удалить группу навсегда? Все расходы и участники будут удалены. Это действие нельзя отменить.')) return;
+    try {
+      await groupsApi.delete(groupId, user.id);
+      navigate('/');
+    } catch {
+      alert('Ошибка при удалении');
     }
   };
 
@@ -93,7 +101,6 @@ export const GroupPage = () => {
   return (
     <div style={{ padding: '16px' }}>
 
-      {/* Заголовок */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
           <Title level="2">{group.icon} {group.name}</Title>
@@ -106,26 +113,20 @@ export const GroupPage = () => {
         </Button>
       </div>
 
-      {/* Кнопки управления группой */}
+      {/* Кнопки управления */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        <Button mode="outline" onClick={() => setShowEdit(!showEdit)}>
-          ✏️ Редактировать
-        </Button>
-        <Button mode="outline" onClick={handleCopyInvite}>
-          🔗 Пригласить
-        </Button>
-        <Button mode="outline" onClick={handleArchive} style={{ color: 'var(--tg-hint-color)' }}>
-          📦 В архив
-        </Button>
+        <Button mode="outline" onClick={() => setShowEdit(!showEdit)}>✏️ Изменить</Button>
+        <Button mode="outline" onClick={handleCopyInvite}>🔗 Пригласить</Button>
+        <Button mode="outline" onClick={() => navigate(`/group/${groupId}/members`)}>👥 Участники</Button>
+        <Button mode="outline" onClick={handleArchive} style={{ color: 'var(--tg-hint-color)' }}>📦 Архив</Button>
+        <Button mode="outline" onClick={handleDelete} style={{ color: '#FF3B30' }}>🗑 Удалить</Button>
       </div>
 
       {/* Форма редактирования */}
       {showEdit && (
         <div style={{
-          marginBottom: 16,
-          padding: 16,
-          background: 'var(--tg-bg-color)',
-          borderRadius: 12,
+          marginBottom: 16, padding: 16,
+          background: 'var(--tg-bg-color)', borderRadius: 12,
           border: '1px solid var(--tg-hint-color)',
         }}>
           <div style={{ marginBottom: 12 }}>
@@ -134,16 +135,11 @@ export const GroupPage = () => {
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               style={{
-                display: 'block',
-                width: '100%',
-                marginTop: 4,
-                padding: '8px 12px',
-                borderRadius: 8,
+                display: 'block', width: '100%', marginTop: 4,
+                padding: '8px 12px', borderRadius: 8,
                 border: '1px solid var(--tg-hint-color)',
-                background: 'transparent',
-                color: 'var(--tg-text-color)',
-                fontSize: 16,
-                boxSizing: 'border-box',
+                background: 'transparent', color: 'var(--tg-text-color)',
+                fontSize: 16, boxSizing: 'border-box',
               }}
             />
           </div>
@@ -154,16 +150,11 @@ export const GroupPage = () => {
               onChange={(e) => setEditIcon(e.target.value)}
               placeholder="🏕️"
               style={{
-                display: 'block',
-                width: '100%',
-                marginTop: 4,
-                padding: '8px 12px',
-                borderRadius: 8,
+                display: 'block', width: '100%', marginTop: 4,
+                padding: '8px 12px', borderRadius: 8,
                 border: '1px solid var(--tg-hint-color)',
-                background: 'transparent',
-                color: 'var(--tg-text-color)',
-                fontSize: 16,
-                boxSizing: 'border-box',
+                background: 'transparent', color: 'var(--tg-text-color)',
+                fontSize: 16, boxSizing: 'border-box',
               }}
             />
           </div>
@@ -171,9 +162,7 @@ export const GroupPage = () => {
             <Button mode="filled" onClick={handleSaveEdit} disabled={editLoading}>
               {editLoading ? 'Сохранение...' : 'Сохранить'}
             </Button>
-            <Button mode="outline" onClick={() => setShowEdit(false)}>
-              Отмена
-            </Button>
+            <Button mode="outline" onClick={() => setShowEdit(false)}>Отмена</Button>
           </div>
         </div>
       )}

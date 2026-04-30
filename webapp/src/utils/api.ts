@@ -29,7 +29,6 @@ export interface Expense {
 
 export interface BalanceInfo {
   total: number;
-  // debts — для совместимости с BalancePage и CloseGroupPage
   debts: Array<{ userId: number; amount: number; userName: string }>;
   balances: Array<{ userId: number; balance: number; userName: string }>;
   transactions: Array<{
@@ -47,7 +46,6 @@ export interface DbUser {
   username?: string | null;
 }
 
-// AppUser — пользователь из общего списка (для InviteMembersPage)
 export interface AppUser {
   id: number;
   telegramId: number;
@@ -55,13 +53,11 @@ export interface AppUser {
   firstName: string | null;
 }
 
-// GroupMember — участник группы. Содержит как плоские поля (id, userId),
-// так и вложенный user-объект — для совместимости со всеми страницами.
 export interface GroupMember {
-  id: number;           // внутренний id пользователя (используется как key)
+  id: number;
   telegramId: number;
   username: string | null;
-  userId: number;       // дублирует id — для страниц которые обращаются к m.userId
+  userId: number;
   user: {
     firstName: string | null;
     username: string | null;
@@ -98,7 +94,6 @@ export const usersApi = {
   getByTelegramId: (telegramId: number | string): Promise<DbUser> =>
     request<DbUser>(`/users/by-telegram/${telegramId}`),
 
-  // Нужен InviteMembersPage для показа всех пользователей приложения
   getAll: (): Promise<AppUser[]> =>
     request<AppUser[]>('/users'),
 };
@@ -118,6 +113,10 @@ export const groupsApi = {
 
   update: (id: string, data: { name?: string; icon?: string; userId: number }): Promise<Group> =>
     request<Group>(`/groups/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // Удалить группу полностью
+  delete: (id: string, userId: number): Promise<{ id: string; deleted: boolean }> =>
+    request(`/groups/${id}`, { method: 'DELETE', body: JSON.stringify({ userId }) }),
 
   archive: (id: string, userId: number): Promise<{ id: string; archived: boolean }> =>
     request(`/groups/${id}/archive`, { method: 'PATCH', body: JSON.stringify({ userId }) }),
