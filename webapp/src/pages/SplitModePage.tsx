@@ -1,6 +1,3 @@
-// Экран выбора способа разделения расхода между участниками.
-// Получает данные расхода (сумма, описание, плательщик) через router state от AddExpensePage.
-
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { NavBar, Card, SLabel, Av, Btn, C } from '../components/ui';
@@ -23,7 +20,6 @@ export const SplitModePage = () => {
 
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [mode, setMode] = useState<'equal' | 'selective' | 'percent'>('equal');
-  // sel хранит id участников, выбранных в режиме "Выборочно"
   const [sel, setSel] = useState<number[]>([]);
   const [pcts, setPcts] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(false);
@@ -40,22 +36,25 @@ export const SplitModePage = () => {
     });
   }, [groupId]);
 
-  if (!group || !exp) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
+  const activeIds = group
+    ? (mode === 'equal' ? group.members.map((m) => m.userId) : sel)
+    : [];
 
-  const activeIds = mode === 'equal' ? group.members.map((m) => m.userId) : sel;
-  const perPerson = activeIds.length > 0 ? Math.ceil(exp.amount / activeIds.length) : 0;
+  const perPerson = activeIds.length > 0 && exp
+    ? Math.ceil(exp.amount / activeIds.length)
+    : 0;
 
   const toggleSel = (id: number) =>
     setSel((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   const handleSubmit = useCallback(async () => {
-    if (!groupId || loading) return;
+    if (!groupId || loading || !exp) return;
     setLoading(true);
     try {
       await expensesApi.create(groupId, {
-        amount: exp!.amount,
-        description: exp!.description,
-        paidBy: exp!.paidBy,
+        amount: exp.amount,
+        description: exp.description,
+        paidBy: exp.paidBy,
         participantIds: activeIds,
       });
       hapticNotification('success');
@@ -63,13 +62,15 @@ export const SplitModePage = () => {
     } finally {
       setLoading(false);
     }
-  }, [groupId, loading, activeIds, exp]);
+  }, [groupId, loading, activeIds, exp, navigate]);
 
   const canSubmit = !loading && (mode !== 'selective' || sel.length > 0);
 
+  // Хуки ВСЕГДА до любого return
   useBackButton(() => navigate(-1));
-  // Нативная MainButton Telegram — дублирует кнопку "Добавить расход" внутри экрана
   useMainButton('Добавить расход', handleSubmit, canSubmit);
+
+  if (!group || !exp) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
   const tabs = [
     { id: 'equal', label: 'Поровну' },
@@ -82,7 +83,6 @@ export const SplitModePage = () => {
       <NavBar title="Режим разделения" onBack={() => navigate(-1)} />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
-        {/* Переключатель режима разделения */}
         <div style={{ padding: '0 16px 14px' }}>
           <div style={{ background: C.card, borderRadius: 10, padding: 4, display: 'flex', gap: 4 }}>
             {tabs.map((t) => (
