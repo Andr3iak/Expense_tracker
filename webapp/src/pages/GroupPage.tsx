@@ -101,6 +101,7 @@ export const GroupPage = () => {
   return (
     <div style={{ padding: '16px' }}>
 
+      {/* Заголовок */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
           <Title level="2">{group.icon} {group.name}</Title>
@@ -113,11 +114,22 @@ export const GroupPage = () => {
         </Button>
       </div>
 
-      {/* Кнопки управления */}
+      {/* Основные действия */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <Button mode="filled" onClick={() => navigate(`/group/${groupId}/balance`)}>
+          💰 Балансы
+        </Button>
+        <Button mode="filled" onClick={() => navigate(`/group/${groupId}/quick-add`)}>
+          ⚡ Быстрый расход
+        </Button>
+      </div>
+
+      {/* Управление группой */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <Button mode="outline" onClick={() => setShowEdit(!showEdit)}>✏️ Изменить</Button>
         <Button mode="outline" onClick={handleCopyInvite}>🔗 Пригласить</Button>
         <Button mode="outline" onClick={() => navigate(`/group/${groupId}/members`)}>👥 Участники</Button>
+        <Button mode="outline" onClick={() => navigate(`/group/${groupId}/close`)}>🔒 Закрыть</Button>
         <Button mode="outline" onClick={handleArchive} style={{ color: 'var(--tg-hint-color)' }}>📦 Архив</Button>
         <Button mode="outline" onClick={handleDelete} style={{ color: '#FF3B30' }}>🗑 Удалить</Button>
       </div>
@@ -169,13 +181,22 @@ export const GroupPage = () => {
 
       {/* Долги */}
       {balanceInfo.transactions.length > 0 && (
-        <div style={{ marginBottom: 20, padding: 12, background: 'var(--tg-bg-color)', borderRadius: 12 }}>
-          <Text weight="2">Кто кому должен:</Text>
+        <div style={{
+          marginBottom: 16, padding: 12,
+          background: 'var(--tg-bg-color)', borderRadius: 12,
+          cursor: 'pointer',
+        }}
+          onClick={() => navigate(`/group/${groupId}/balance`)}
+        >
+          <Text weight="2">💸 Кто кому должен:</Text>
           {balanceInfo.transactions.map((t, i) => (
             <Text key={i} style={{ fontSize: 14, display: 'block', marginTop: 4 }}>
-              💸 {t.fromName} → {t.toName}: {t.amount} ₽
+              {t.fromName} → {t.toName}: {t.amount} ₽
             </Text>
           ))}
+          <Text style={{ fontSize: 12, color: 'var(--tg-hint-color)', marginTop: 6, display: 'block' }}>
+            Нажмите для погашения →
+          </Text>
         </div>
       )}
 
@@ -189,6 +210,7 @@ export const GroupPage = () => {
               before={<Avatar>💰</Avatar>}
               subtitle={`Заплатил: ${exp.paidByName ?? exp.paidBy} • ${new Date(exp.date).toLocaleDateString()}`}
               after={<Text style={{ fontWeight: 'bold' }}>{exp.amount} ₽</Text>}
+              onClick={() => navigate(`/group/${groupId}/dispute`, { state: exp })}
             >
               {exp.description}
             </Cell>
