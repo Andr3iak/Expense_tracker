@@ -17,8 +17,19 @@ export class UsersController {
     };
   }
 
-  // Нужен для инвайт-ссылки: фронтенд получает пользователя по telegramId
-  // и затем вызывает POST /groups/:id/members
+  // GET /api/users — список всех пользователей для InviteMembersPage
+  @Get()
+  async getAll() {
+    const users = await this.usersService.getAllUsers();
+    return users.map((u) => ({
+      id: u.id,
+      telegramId: Number(u.telegramId),
+      username: u.username,
+      firstName: u.username, 
+    }));
+  }
+
+  // GET /api/users/by-telegram/:telegramId
   @Get('by-telegram/:telegramId')
   async getByTelegramId(@Param('telegramId') telegramId: string) {
     const user = await this.usersService.findByTelegramId(telegramId);
