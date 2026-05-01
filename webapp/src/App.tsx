@@ -41,12 +41,8 @@ function InviteHandler() {
     groupsApi
       .join(groupId, {
         telegramId: user.telegramId,
-<<<<<<< HEAD
         username: tg?.initDataUnsafe?.user?.username,
         firstName: tg?.initDataUnsafe?.user?.first_name,
-=======
-        username: tg?.initDataUnsafe?.user?.username ?? user.username ?? undefined,
->>>>>>> feature/telegram-groups
       })
       .then(() => navigate(`/group/${groupId}`, { replace: true }))
       .catch(() => navigate(`/group/${groupId}`, { replace: true }));
