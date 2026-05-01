@@ -135,6 +135,22 @@ export class GroupsService {
     });
     return { groupId, userId };
   }
+  
+  async addMemberByTelegramId(groupId: string, telegramId: number | string, username?: string, firstName?: string) {
+    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
+    if (!group) throw new NotFoundException('Group not found');
+    const user = await this.prisma.user.upsert({
+      where: { telegramId: BigInt(telegramId) },
+      update: { username: username ?? undefined, firstName: firstName ?? undefined },
+      create: { telegramId: BigInt(telegramId), username: username ?? null, firstName: firstName ?? null },
+    });
+    await this.prisma.groupMember.upsert({
+      where: { groupId_userId: { groupId, userId: user.id } },
+      create: { groupId, userId: user.id },
+      update: {},
+    });
+    return { groupId, userId: user.id };
+  }
 
   async removeMember(groupId: string, userId: number) {
     await this.prisma.groupMember.deleteMany({ where: { groupId, userId } });

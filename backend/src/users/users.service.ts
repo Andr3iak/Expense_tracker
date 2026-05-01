@@ -13,6 +13,15 @@ export class UsersService {
       create: { telegramId: tgId, username: username ?? null },
     });
   }
+  
+  async upsertUser(telegramId: number | string, username?: string, firstName?: string) {
+    const tgId = BigInt(telegramId);
+    return this.prisma.user.upsert({
+      where: { telegramId: tgId },
+      update: { username: username ?? null, firstName: firstName ?? null },
+      create: { telegramId: tgId, username: username ?? null, firstName: firstName ?? null },
+    });
+  }
 
   async findByTelegramId(telegramId: number | string) {
     return this.prisma.user.findUnique({
