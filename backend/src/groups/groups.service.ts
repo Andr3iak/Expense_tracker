@@ -156,19 +156,4 @@ export class GroupsService {
     await this.prisma.groupMember.deleteMany({ where: { groupId, userId } });
     return { groupId, userId, removed: true };
   }
-
-  async addMemberByTelegramId(groupId: string, telegramId: number | string, username?: string) {
-    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
-    if (!group) throw new NotFoundException('Group not found');
-    const user = await this.prisma.user.upsert({
-      where: { telegramId: BigInt(telegramId) },
-      update: { username: username ?? undefined },
-      create: { telegramId: BigInt(telegramId), username: username ?? null },
-    });
-    await this.prisma.groupMember.upsert({
-      where: { groupId_userId: { groupId, userId: user.id } },
-      create: { groupId, userId: user.id }, update: {},
-    });
-    return { groupId, userId: user.id };
-  }
 }
