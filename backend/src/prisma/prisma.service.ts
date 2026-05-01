@@ -8,7 +8,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   constructor() {
     const isTest = process.env.NODE_ENV === 'test';
     const dbName = isTest ? 'test.db' : 'dev.db';
-    const dbPath = join(process.cwd(), dbName);
+    // __dirname points to dist/src/prisma — four levels up lands at the backend root,
+    // matching where `prisma migrate deploy` places dev.db (relative to the project root).
+    const dbPath = join(__dirname, '..', '..', '..', '..', dbName);
     
     console.log(`Using database: ${dbPath} (${isTest ? 'test' : 'development'} mode)`);
     
