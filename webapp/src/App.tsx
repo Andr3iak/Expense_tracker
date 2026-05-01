@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AppRoot } from '@telegram-apps/telegram-ui';
 import { useEffect } from 'react';
 import {
@@ -11,31 +11,40 @@ import { UserProvider } from './context/UserContext';
 import { useUser } from './context/UserContext';
 import { groupsApi } from './utils/api';
 
-// Обрабатывает переход по инвайт-ссылке.
-// Читает start_param из Telegram WebApp и вступает в группу.
 function InviteHandler() {
   const { user } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!user) return;
 
+    // Способ 1: Telegram Mini App startapp параметр (приоритет)
     const tg = (window as any).Telegram?.WebApp;
     const startParam: string | undefined = tg?.initDataUnsafe?.start_param;
-    if (!startParam) return;
 
-    // Поддерживаем два формата: "join_<groupId>" и просто "<groupId>"
-    const groupId = startParam.startsWith('join_')
-      ? startParam.slice(5)
-      : startParam;
+    // Способ 2: URL параметр ?join=<groupId> (для браузера и прямых ссылок)
+    const urlParams = new URLSearchParams(location.search);
+    const joinParam = urlParams.get('join');
+
+    // Способ 3: ?startapp=<groupId>
+    const startappParam = urlParams.get('startapp');
+
+    const rawGroupId = startParam || joinParam || startappParam;
+    if (!rawGroupId) return;
+
+    // Поддерживаем форматы: "join_<groupId>" и просто "<groupId>"
+    const groupId = rawGroupId.startsWith('join_')
+      ? rawGroupId.slice(5)
+      : rawGroupId;
 
     groupsApi
       .join(groupId, {
         telegramId: user.telegramId,
-        username: tg?.initDataUnsafe?.user?.username,
+        username: tg?.initDataUnsafe?.user?.username ?? user.username ?? undefined,
       })
-      .then(() => navigate(`/group/${groupId}`))
-      .catch(() => navigate(`/group/${groupId}`)); // уже в группе — всё равно переходим
+      .then(() => navigate(`/group/${groupId}`, { replace: true }))
+      .catch(() => navigate(`/group/${groupId}`, { replace: true }));
   }, [user?.id]);
 
   return null;
