@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
-=======
-import { Controller, Get, Post, Param, Body, Query, BadRequestException } from '@nestjs/common';
->>>>>>> main
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, BadRequestException } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 
 @Controller('groups')
@@ -14,6 +10,13 @@ export class GroupsController {
     const id = parseInt(userId, 10);
     if (isNaN(id)) throw new BadRequestException('userId must be a number');
     return this.groupsService.getGroupsByUser(id);
+  }
+
+  @Get('archived')
+  getArchived(@Query('userId') userId: string) {
+    const id = parseInt(userId, 10);
+    if (isNaN(id)) throw new BadRequestException('userId must be a number');
+    return this.groupsService.getArchivedGroupsByUser(id);
   }
 
   @Post()
@@ -28,25 +31,43 @@ export class GroupsController {
     return this.groupsService.getGroupById(id);
   }
 
-  // Добавить участника по внутреннему userId
+  @Patch(':id')
+  update(
+    @Param('id') groupId: string,
+    @Body() body: { name?: string; icon?: string; userId: number },
+  ) {
+    if (!body.userId) throw new BadRequestException('userId is required');
+    return this.groupsService.updateGroup(groupId, body.userId, { name: body.name, icon: body.icon });
+  }
+
+  @Delete(':id')
+  deleteGroup(@Param('id') groupId: string, @Body() body: { userId: number }) {
+    if (!body.userId) throw new BadRequestException('userId is required');
+    return this.groupsService.deleteGroup(groupId, body.userId);
+  }
+
+  @Patch(':id/archive')
+  archive(@Param('id') groupId: string, @Body() body: { userId: number }) {
+    if (!body.userId) throw new BadRequestException('userId is required');
+    return this.groupsService.archiveGroup(groupId, body.userId);
+  }
+
+  @Patch(':id/unarchive')
+  unarchive(@Param('id') groupId: string, @Body() body: { userId: number }) {
+    if (!body.userId) throw new BadRequestException('userId is required');
+    return this.groupsService.unarchiveGroup(groupId, body.userId);
+  }
+
   @Post(':id/members')
   addMember(@Param('id') groupId: string, @Body() body: { userId: number }) {
     if (!body.userId) throw new BadRequestException('userId is required');
     return this.groupsService.addMember(groupId, body.userId);
   }
 
-<<<<<<< HEAD
   @Delete(':id/members/:userId')
   removeMember(@Param('id') groupId: string, @Param('userId') userId: string) {
     return this.groupsService.removeMember(groupId, parseInt(userId, 10));
   }
-
-  @Patch(':id')
-  updateGroup(@Param('id') id: string, @Body() body: { name?: string; icon?: string }) {
-    return this.groupsService.updateGroup(id, body);
-  }
-}
-=======
 
   @Post(':id/join')
   joinByInvite(
@@ -57,10 +78,8 @@ export class GroupsController {
     return this.groupsService.addMemberByTelegramId(groupId, body.telegramId, body.username);
   }
 
-  // Отдаёт данные группы для превью инвайт-страницы (без авторизации)
   @Get(':id/invite-preview')
   getInvitePreview(@Param('id') id: string) {
     return this.groupsService.getGroupById(id);
   }
 }
->>>>>>> main

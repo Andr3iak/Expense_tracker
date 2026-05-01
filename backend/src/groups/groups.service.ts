@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -11,22 +11,41 @@ export class GroupsService {
     const memberships = await this.prisma.groupMember.findMany({
       where: { userId },
       include: {
-        group: {
-          include: {
-            _count: { select: { members: true } },
-          },
-        },
+        group: { include: { _count: { select: { members: true } } } },
       },
     });
 
-    return memberships.map((m) => ({
-      id: m.group.id,
-      name: m.group.name,
-      icon: m.group.icon ?? '📁',
-      membersCount: m.group._count.members,
-      lastActivity: m.group.createdAt,
-      balance: 0,
-    }));
+    return memberships
+      .filter((m) => !m.group.archived)
+      .map((m) => ({
+        id: m.group.id,
+        name: m.group.name,
+        icon: m.group.icon ?? '📁',
+        membersCount: m.group._count.members,
+        lastActivity: m.group.createdAt,
+        balance: 0,
+      }));
+  }
+
+  async getArchivedGroupsByUser(userId: number) {
+    const memberships = await this.prisma.groupMember.findMany({
+      where: { userId },
+      include: {
+        group: { include: { _count: { select: { members: true } } } },
+      },
+    });
+
+    return memberships
+      .filter((m) => m.group.archived)
+      .map((m) => ({
+        id: m.group.id,
+        name: m.group.name,
+        icon: m.group.icon ?? '📁',
+        membersCount: m.group._count.members,
+        lastActivity: m.group.createdAt,
+        archivedAt: m.group.archivedAt,
+        balance: 0,
+      }));
   }
 
   async createGroup(name: string, icon: string | undefined, userId: number) {
@@ -34,9 +53,7 @@ export class GroupsService {
       data: {
         name,
         icon: icon ?? null,
-        members: {
-          create: { userId },
-        },
+        members: { create: { userId } },
       },
       include: { _count: { select: { members: true } } },
     });
@@ -55,9 +72,7 @@ export class GroupsService {
     const group = await this.prisma.group.findUnique({
       where: { id: groupId },
       include: {
-        members: {
-          include: { user: true },
-        },
+        members: { include: { user: true } },
         _count: { select: { members: true } },
       },
     });
@@ -69,15 +84,93 @@ export class GroupsService {
       icon: group.icon ?? '📁',
       membersCount: group._count.members,
       lastActivity: group.createdAt,
+      archived: group.archived,
+      archivedAt: group.archivedAt,
       members: group.members.map((m) => ({
         id: m.user.id,
         telegramId: Number(m.user.telegramId),
         username: m.user.username,
+        userId: m.user.id,
+        user: {
+          firstName: m.user.username,
+          username: m.user.username,
+        },
       })),
     };
   }
 
-  // Добавление участника по внутреннему userId (используется напрямую)
+  async updateGroup(groupId: string, userId: number, data: { name?: string; icon?: string }) {
+    const membership = await this.prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (!membership) throw new ForbiddenException('You are not a member of this group');
+
+    const group = await this.prisma.group.update({
+      where: { id: groupId },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.icon !== undefined && { icon: data.icon }),
+      },
+      include: { _count: { select: { members: true } } },
+    });
+
+    return {
+      id: group.id,
+      name: group.name,
+      icon: group.icon ?? '📁',
+      membersCount: group._count.members,
+      lastActivity: group.createdAt,
+      balance: 0,
+    };
+  }
+
+  async deleteGroup(groupId: string, userId: number) {
+    const membership = await this.prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (!membership) throw new ForbiddenException('You are not a member of this group');
+
+    const expenses = await this.prisma.expense.findMany({ where: { groupId } });
+    const expenseIds = expenses.map((e) => e.id);
+
+    await this.prisma.expenseParticipant.deleteMany({
+      where: { expenseId: { in: expenseIds } },
+    });
+    await this.prisma.expense.deleteMany({ where: { groupId } });
+    await this.prisma.groupMember.deleteMany({ where: { groupId } });
+    await this.prisma.group.delete({ where: { id: groupId } });
+
+    return { id: groupId, deleted: true };
+  }
+
+  async archiveGroup(groupId: string, userId: number) {
+    const membership = await this.prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (!membership) throw new ForbiddenException('You are not a member of this group');
+
+    const group = await this.prisma.group.update({
+      where: { id: groupId },
+      data: { archived: true, archivedAt: new Date() },
+    });
+
+    return { id: group.id, archived: group.archived, archivedAt: group.archivedAt };
+  }
+
+  async unarchiveGroup(groupId: string, userId: number) {
+    const membership = await this.prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (!membership) throw new ForbiddenException('You are not a member of this group');
+
+    const group = await this.prisma.group.update({
+      where: { id: groupId },
+      data: { archived: false, archivedAt: null },
+    });
+
+    return { id: group.id, archived: group.archived };
+  }
+
   async addMember(groupId: string, userId: number) {
     const group = await this.prisma.group.findUnique({ where: { id: groupId } });
     if (!group) throw new NotFoundException('Group not found');
@@ -85,7 +178,6 @@ export class GroupsService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
-    // upsert — повторный вызов не упадёт с ошибкой уникальности
     const member = await this.prisma.groupMember.upsert({
       where: { groupId_userId: { groupId, userId } },
       create: { groupId, userId },
@@ -103,18 +195,11 @@ export class GroupsService {
     };
   }
 
-<<<<<<< HEAD
   async removeMember(groupId: string, userId: number) {
-    return this.prisma.groupMember.deleteMany({ where: { groupId, userId } });
+    await this.prisma.groupMember.deleteMany({ where: { groupId, userId } });
+    return { groupId, userId, removed: true };
   }
 
-  async updateGroup(groupId: string, data: { name?: string; icon?: string | null }) {
-    return this.prisma.group.update({ where: { id: groupId }, data });
-  }
-}
-=======
-  // Добавление по telegramId — используется при переходе по инвайт-ссылке.
-  // Если пользователь ещё не зарегистрирован — создаём его автоматически.
   async addMemberByTelegramId(
     groupId: string,
     telegramId: number | string,
@@ -123,8 +208,6 @@ export class GroupsService {
     const group = await this.prisma.group.findUnique({ where: { id: groupId } });
     if (!group) throw new NotFoundException('Group not found');
 
-    // upsert пользователя — после перехода по ссылке он точно есть в Telegram
-    
     const user = await this.prisma.user.upsert({
       where: { telegramId: BigInt(telegramId) },
       update: { username: username ?? undefined },
@@ -148,4 +231,3 @@ export class GroupsService {
     };
   }
 }
->>>>>>> main

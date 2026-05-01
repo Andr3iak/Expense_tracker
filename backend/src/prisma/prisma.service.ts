@@ -6,7 +6,6 @@ import { join } from 'path';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
-    
     const dbPath = join(process.cwd(), 'dev.db');
     const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
     super({ adapter });

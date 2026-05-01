@@ -7,6 +7,7 @@ import { NavBar, Card, SLabel, Av, Pill, Btn, C } from '../components/ui';
 import { groupsApi, balancesApi } from '../utils/api';
 import type { GroupDetail, BalanceInfo } from '../utils/api';
 import { avatarColor, initials } from '../components/ui';
+import { useUser } from '../context/UserContext';
 
 export const CloseGroupPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
@@ -14,6 +15,7 @@ export const CloseGroupPage = () => {
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [info, setInfo] = useState<BalanceInfo | null>(null);
   const [done, setDone] = useState(false);
+  const { user } = useUser();
 
   useEffect(() => {
     if (!groupId) return;
@@ -82,7 +84,12 @@ export const CloseGroupPage = () => {
         </Card>
 
         <div style={{ padding: 16 }}>
-          <Btn label="Закрыть группу" onTap={() => setDone(true)} danger />
+          <Btn label="Закрыть группу" onTap={async () => {
+            if (user && groupId) {
+              await groupsApi.archive(groupId, user.id);
+            }
+            setDone(true);
+            }} danger />
         </div>
       </div>
     </div>

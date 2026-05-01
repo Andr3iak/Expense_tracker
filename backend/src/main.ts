@@ -6,7 +6,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // BigInt не сериализуется в JSON из коробки — Telegram ID в Prisma хранится как BigInt.
+ 
   (BigInt.prototype as any).toJSON = function () {
     return Number(this);
   };
@@ -14,17 +14,19 @@ async function bootstrap() {
   app.enableCors({ origin: '*' });
   app.setGlobalPrefix('api');
 
-  // __dirname = backend/dist/src/, три уровня вверх до корня репо, затем webapp/dist.
+  
   const staticPath = join(__dirname, '..', '..', '..', 'webapp', 'dist');
+
+ 
   app.useStaticAssets(staticPath);
 
-  // SPA-fallback: все не-API маршруты отдают index.html, чтобы React Router работал.
+  
   app.use((req: any, res: any, next: any) => {
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(join(staticPath, 'index.html'));
-    } else {
-      next();
+    if (req.path.startsWith('/api')) {
+      return next(); 
     }
+   
+    res.sendFile(join(staticPath, 'index.html'));
   });
 
   await app.listen(process.env.PORT ?? 3000);
