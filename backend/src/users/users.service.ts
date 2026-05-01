@@ -5,12 +5,12 @@ import { PrismaService } from '../prisma/prisma.service';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async upsertUser(telegramId: number | string, username?: string, firstName?: string) {
+  async upsertUser(telegramId: number | string, username?: string) {
     const tgId = BigInt(telegramId);
     return this.prisma.user.upsert({
       where: { telegramId: tgId },
-      update: { username: username ?? null, firstName: firstName ?? null },
-      create: { telegramId: tgId, username: username ?? null, firstName: firstName ?? null },
+      update: { username: username ?? null },
+      create: { telegramId: tgId, username: username ?? null },
     });
   }
 
@@ -20,10 +20,7 @@ export class UsersService {
     });
   }
 
-  // Все пользователи приложения — для страницы приглашения участников
   async getAllUsers() {
-    return this.prisma.user.findMany({
-      orderBy: { id: 'asc' },
-    });
+    return this.prisma.user.findMany({ orderBy: { id: 'asc' } });
   }
 }

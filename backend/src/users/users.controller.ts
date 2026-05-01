@@ -9,16 +9,15 @@ export class UsersController {
   async upsert(
     @Body() body: { telegramId: number | string; username?: string; firstName?: string },
   ) {
-    const user = await this.usersService.upsertUser(body.telegramId, body.username, body.firstName);
+    const user = await this.usersService.upsertUser(body.telegramId, body.username ?? body.firstName);
     return {
       id: user.id,
       telegramId: Number(user.telegramId),
       username: user.username,
-      firstName: user.firstName,
+      firstName: user.username,
     };
   }
 
-  // GET /api/users — список всех пользователей для InviteMembersPage
   @Get()
   async getAll() {
     const users = await this.usersService.getAllUsers();
@@ -26,11 +25,10 @@ export class UsersController {
       id: u.id,
       telegramId: Number(u.telegramId),
       username: u.username,
-      firstName: u.firstName,
+      firstName: u.username,
     }));
   }
 
-  // GET /api/users/by-telegram/:telegramId
   @Get('by-telegram/:telegramId')
   async getByTelegramId(@Param('telegramId') telegramId: string) {
     const user = await this.usersService.findByTelegramId(telegramId);
@@ -39,6 +37,7 @@ export class UsersController {
       id: user.id,
       telegramId: Number(user.telegramId),
       username: user.username,
+      firstName: user.username,
     };
   }
 }
