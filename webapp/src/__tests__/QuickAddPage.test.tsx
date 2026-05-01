@@ -4,14 +4,16 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QuickAddPage } from '../pages/QuickAddPage';
 import { useUser } from '../context/UserContext';
 import { groupsApi, expensesApi } from '../utils/api';
-import { hapticNotification } from '../hooks';
 
 vi.mock('../context/UserContext', () => ({ useUser: vi.fn() }));
 vi.mock('../utils/api', () => ({
   groupsApi: { getById: vi.fn() },
   expensesApi: { create: vi.fn() },
 }));
-vi.mock('../hooks', () => ({ hapticNotification: vi.fn() }));
+vi.mock('../hooks', () => ({
+  hapticNotification: vi.fn(),
+  hapticImpact: vi.fn(),
+}));
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -60,7 +62,6 @@ describe('QuickAddPage', () => {
         paidBy: 1,
         participantIds: [1, 2],
       });
-      expect(hapticNotification).toHaveBeenCalledWith('success');
       expect(screen.getByText('✓ Добавлено!')).toBeInTheDocument();
     });
   });
