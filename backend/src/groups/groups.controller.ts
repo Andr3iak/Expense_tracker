@@ -3,7 +3,7 @@ import { GroupsService } from './groups.service';
 
 @Controller('groups')
 export class GroupsController {
-  constructor(private groupsService: GroupsService) {}
+  constructor(private groupsService: GroupsService) { }
 
   @Get()
   getAll(@Query('userId') userId: string) {
