@@ -5,5 +5,8 @@
     "@nestjs/platform-express": "^11.1.19",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
   }
 }
