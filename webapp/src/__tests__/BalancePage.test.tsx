@@ -1,12 +1,12 @@
 ﻿import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { BalancePage } from '../../pages/BalancePage';
-import { useUser } from '../../context/UserContext';
-import { balancesApi, groupsApi } from '../../utils/api';
+import { BalancePage } from '../pages/BalancePage';
+import { useUser } from '../context/UserContext';
+import { balancesApi, groupsApi } from '../utils/api';
 
-vi.mock('../../context/UserContext', () => ({ useUser: vi.fn() }));
-vi.mock('../../utils/api', () => ({
+vi.mock('../context/UserContext', () => ({ useUser: vi.fn() }));
+vi.mock('../utils/api', () => ({
   balancesApi: { getByGroup: vi.fn() },
   groupsApi: { getById: vi.fn() },
 }));
@@ -39,12 +39,11 @@ describe('BalancePage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Итого по группе')).toBeInTheDocument();
-      // Используем регулярное выражение, чтобы игнорировать пробел в числе
-      expect(screen.getByText(/1\s?250\s?₽/)).toBeInTheDocument();
+      expect(screen.getByText(/1[\s]?250[\s]?₽/)).toBeInTheDocument();
       expect(screen.getByText('Борис')).toBeInTheDocument();
-      expect(screen.getByText(/400\s?₽/)).toBeInTheDocument();
+      expect(screen.getByText(/400[\s]?₽/)).toBeInTheDocument();
       expect(screen.getByText('Виктор')).toBeInTheDocument();
-      expect(screen.getByText(/150\s?₽/)).toBeInTheDocument();
+      expect(screen.getByText(/150[\s]?₽/)).toBeInTheDocument();
     });
   });
 
