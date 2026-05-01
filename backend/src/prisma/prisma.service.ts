@@ -6,7 +6,12 @@ import { join } from 'path';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
-    const dbPath = join(process.cwd(), 'dev.db');
+    const isTest = process.env.NODE_ENV === 'test';
+    const dbName = isTest ? 'test.db' : 'dev.db';
+    const dbPath = join(process.cwd(), dbName);
+    
+    console.log(`Using database: ${dbPath} (${isTest ? 'test' : 'development'} mode)`);
+    
     const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
     super({ adapter });
   }
@@ -17,5 +22,18 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   async onModuleDestroy() {
     await this.$disconnect();
+  }
+
+  async cleanDatabase() {
+    if (process.env.NODE_ENV === 'test') {
+      const tablenames = await this.$queryRaw<
+        Array<{ name: string }>
+      >`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma_migrations';`;
+      
+      for (const { name } of tablenames) {
+        await this.$executeRawUnsafe(`DELETE FROM "${name}";`);
+        await this.$executeRawUnsafe(`DELETE FROM sqlite_sequence WHERE name='${name}';`);
+      }
+    }
   }
 }
