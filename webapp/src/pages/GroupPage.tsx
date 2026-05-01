@@ -4,12 +4,16 @@ import { NavBar, Card, SLabel, Av, Pill, EmojiIcon, Sheet, EmojiPicker, Btn, C }
 import { useUser } from '../context/UserContext';
 import { groupsApi, expensesApi, balancesApi } from '../utils/api';
 import type { Expense, BalanceInfo, GroupDetail } from '../utils/api';
+<<<<<<< HEAD
 import { avatarColor, initials } from '../components/ui';
 import { hapticNotification } from '../hooks';
 
 function memberDisplayName(user: { username: string | null; firstName: string | null }, userId: number): string {
   return user.firstName || user.username || `User ${userId}`;
 }
+=======
+import { shareLink } from '../hooks';
+>>>>>>> feature/telegram-groups
 
 export const GroupPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
@@ -17,10 +21,18 @@ export const GroupPage = () => {
   const { user } = useUser();
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+<<<<<<< HEAD
   const [balanceInfo, setBalanceInfo] = useState<BalanceInfo>({ total: 0, debts: [], balances: [], transactions: [] });
   const [q, setQ] = useState('');
 
   const [editSheet, setEditSheet] = useState(false);
+=======
+  const [balanceInfo, setBalanceInfo] = useState<BalanceInfo>({
+    total: 0, debts: [], balances: [], transactions: [],
+  });
+  const [loading, setLoading] = useState(true);
+  const [showEdit, setShowEdit] = useState(false);
+>>>>>>> feature/telegram-groups
   const [editName, setEditName] = useState('');
   const [editIcon, setEditIcon] = useState('');
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -56,34 +68,70 @@ export const GroupPage = () => {
 
   const saveEdit = async () => {
     if (!groupId || !user || !editName.trim()) return;
+<<<<<<< HEAD
     await groupsApi.update(groupId, { name: editName.trim(), icon: editIcon || undefined, userId: user.id });
     hapticNotification('success');
     setEditSheet(false);
     loadAll();
+=======
+    setEditLoading(true);
+    try {
+      const updated = await groupsApi.update(groupId, {
+        name: editName, icon: editIcon || undefined, userId: user.id,
+      });
+      setGroup((prev) => prev ? { ...prev, name: updated.name, icon: updated.icon ?? null } : prev);
+      setShowEdit(false);
+    } catch { alert('Ошибка при сохранении'); }
+    finally { setEditLoading(false); }
+>>>>>>> feature/telegram-groups
   };
 
   const handleArchive = async () => {
     if (!groupId || !user) return;
     if (!window.confirm('Переместить группу в архив?')) return;
+<<<<<<< HEAD
     await groupsApi.archive(groupId, user.id).catch(() => alert('Ошибка при архивировании'));
     navigate('/');
+=======
+    try { await groupsApi.archive(groupId, user.id); navigate('/'); }
+    catch { alert('Ошибка при архивировании'); }
+>>>>>>> feature/telegram-groups
   };
 
   const handleDelete = async () => {
     if (!groupId || !user) return;
+<<<<<<< HEAD
     if (!window.confirm('Удалить группу навсегда? Все расходы и участники будут удалены.')) return;
     await groupsApi.delete(groupId, user.id).catch(() => alert('Ошибка при удалении'));
     navigate('/');
+=======
+    if (!window.confirm('Удалить группу навсегда? Все расходы и участники будут удалены. Это нельзя отменить.')) return;
+    try { await groupsApi.delete(groupId, user.id); navigate('/'); }
+    catch { alert('Ошибка при удалении'); }
+>>>>>>> feature/telegram-groups
   };
 
-  const handleCopyInvite = () => {
+  const handleInvite = () => {
+    if (!groupId) return;
+    const tg = (window as any).Telegram?.WebApp;
     const botUsername = import.meta.env.VITE_BOT_USERNAME ?? 'Ex3penseTracker_bot';
     const appShortName = import.meta.env.VITE_APP_SHORT_NAME ?? 'app';
-    const link = `https://t.me/${botUsername}/${appShortName}?startapp=${groupId}`;
-    navigator.clipboard.writeText(link).then(() => alert('Ссылка скопирована!'));
+
+    // Для Telegram — deep link через бота
+    const tgLink = `https://t.me/${botUsername}/${appShortName}?startapp=${groupId}`;
+    // Для браузера — прямая ссылка с ?join= параметром
+    const webLink = `${window.location.origin}?join=${groupId}`;
+
+    if (tg) {
+      // Используем нативный Telegram share
+      shareLink(tgLink, `Присоединяйся к группе расходов «${group?.name}»!`);
+    } else {
+      navigator.clipboard.writeText(webLink).then(() => alert('Ссылка скопирована!'));
+    }
   };
 
   return (
+<<<<<<< HEAD
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: C.bg, position: 'relative' }}>
       <NavBar title={group.name} onBack={() => navigate('/')} rightLabel="⚙️" onRight={openEdit} />
 
@@ -125,6 +173,45 @@ export const GroupPage = () => {
             <span style={{ color: C.hint, fontSize: 15 }}>🔍</span>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск по имени"
               style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, background: 'none', fontFamily: 'inherit' }} />
+=======
+    <div style={{ padding: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div>
+          <Title level="2">{group.icon} {group.name}</Title>
+          <Text style={{ color: 'var(--tg-hint-color)' }}>Всего потрачено: {balanceInfo.total} ₽</Text>
+        </div>
+        <Button onClick={() => navigate(`/group/${groupId}/add-expense`)} mode="filled">+ Расход</Button>
+      </div>
+
+      {/* Основные действия */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <Button mode="filled" onClick={() => navigate(`/group/${groupId}/balance`)}>💰 Балансы</Button>
+        <Button mode="filled" onClick={() => navigate(`/group/${groupId}/quick-add`)}>⚡ Быстро</Button>
+      </div>
+
+      {/* Управление группой */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        <Button mode="outline" onClick={() => setShowEdit(!showEdit)}>✏️ Изменить</Button>
+        <Button mode="outline" onClick={handleInvite}>🔗 Пригласить</Button>
+        <Button mode="outline" onClick={() => navigate(`/group/${groupId}/members`)}>👥 Участники</Button>
+        <Button mode="outline" onClick={() => navigate(`/group/${groupId}/close`)}>🔒 Закрыть</Button>
+        <Button mode="outline" onClick={handleArchive} style={{ color: 'var(--tg-hint-color)' }}>📦 Архив</Button>
+        <Button mode="outline" onClick={handleDelete} style={{ color: '#FF3B30' }}>🗑 Удалить</Button>
+      </div>
+
+      {/* Форма редактирования */}
+      {showEdit && (
+        <div style={{ marginBottom: 16, padding: 16, background: 'var(--tg-bg-color)', borderRadius: 12, border: '1px solid var(--tg-hint-color)' }}>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 14, color: 'var(--tg-hint-color)' }}>Название</label>
+            <input value={editName} onChange={(e) => setEditName(e.target.value)}
+              style={{ display: 'block', width: '100%', marginTop: 4, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--tg-hint-color)', background: 'transparent', color: 'var(--tg-text-color)', fontSize: 16, boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 14, color: 'var(--tg-hint-color)' }}>Иконка (эмодзи)</label>
+            <input value={editIcon} onChange={(e) => setEditIcon(e.target.value)} placeholder="🏕️"
+              style={{ display: 'block', width: '100%', marginTop: 4, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--tg-hint-color)', background: 'transparent', color: 'var(--tg-text-color)', fontSize: 16, boxSizing: 'border-box' }} />
+>>>>>>> feature/telegram-groups
           </div>
         </div>
 
@@ -245,6 +332,7 @@ export const GroupPage = () => {
           <Btn label="Сохранить" onTap={saveEdit} disabled={!editName.trim()} />
 
           <div style={{ display: 'flex', gap: 8 }}>
+<<<<<<< HEAD
             <button onClick={handleCopyInvite} style={{
               flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${C.border}`,
               background: 'transparent', color: C.blue, fontSize: 14, cursor: 'pointer',
@@ -260,11 +348,46 @@ export const GroupPage = () => {
               flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #FF3B30',
               background: 'transparent', color: '#FF3B30', fontSize: 14, cursor: 'pointer',
             }}>🗑 Удалить</button>
+=======
+            <Button mode="filled" onClick={handleSaveEdit} disabled={editLoading}>{editLoading ? 'Сохранение...' : 'Сохранить'}</Button>
+            <Button mode="outline" onClick={() => setShowEdit(false)}>Отмена</Button>
+>>>>>>> feature/telegram-groups
           </div>
         </div>
       </Sheet>
 
+<<<<<<< HEAD
       <EmojiPicker show={emojiOpen} onClose={() => setEmojiOpen(false)} onSelect={setEditIcon} />
+=======
+      {/* Долги */}
+      {balanceInfo.transactions.length > 0 && (
+        <div style={{ marginBottom: 16, padding: 12, background: 'var(--tg-bg-color)', borderRadius: 12, cursor: 'pointer' }}
+          onClick={() => navigate(`/group/${groupId}/balance`)}>
+          <Text weight="2">💸 Кто кому должен:</Text>
+          {balanceInfo.transactions.map((t, i) => (
+            <Text key={i} style={{ fontSize: 14, display: 'block', marginTop: 4 }}>
+              {t.fromName} → {t.toName}: {t.amount} ₽
+            </Text>
+          ))}
+          <Text style={{ fontSize: 12, color: 'var(--tg-hint-color)', marginTop: 6, display: 'block' }}>Нажмите для погашения →</Text>
+        </div>
+      )}
+
+      {/* История расходов */}
+      <List>
+        <Section header="История расходов">
+          {expenses.length === 0 && <Cell>Пока нет расходов. Добавьте первый!</Cell>}
+          {expenses.map((exp) => (
+            <Cell key={exp.id}
+              before={<Avatar>💰</Avatar>}
+              subtitle={`Заплатил: ${exp.paidByName ?? exp.paidBy} • ${new Date(exp.date).toLocaleDateString()}`}
+              after={<Text style={{ fontWeight: 'bold' }}>{exp.amount} ₽</Text>}
+              onClick={() => navigate(`/group/${groupId}/dispute`, { state: exp })}
+            >{exp.description}</Cell>
+          ))}
+        </Section>
+      </List>
+>>>>>>> feature/telegram-groups
     </div>
   );
 };
