@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  // URL теперь задаётся в prisma.config.ts и через переменную окружения
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  telegramId  BigInt   @unique
+  username    String?
+  firstName   String?
+  groups      GroupMember[]
+  paidExpenses Expense[] @relation("paidBy")
+  expenseShares ExpenseParticipant[]
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  icon        String?
+  archived    Boolean  @default(false)
+  archivedAt  DateTime?
+  createdAt   DateTime @default(now())
+  members     GroupMember[]
+  expenses    Expense[]
+}
+
+model GroupMember {
+  id        String @id @default(cuid())
+  groupId   String
+  userId    Int
+  group     Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model Expense {
+  id           String   @id @default(cuid())
+  groupId      String
+  amount       Float
+  description  String
+  category     String   @default("other")
+  paidBy       Int
+  date         DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  group        Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidByUser   User     @relation("paidBy", fields: [paidBy], references: [id], onDelete: Restrict)
+  participants ExpenseParticipant[]
+}
+
+model ExpenseParticipant {
+  id        String   @id @default(cuid())
+  expenseId String
+  userId    Int
+  expense   Expense  @relation(fields: [expenseId], references: [id], onDelete: Restrict)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([expenseId, userId])
+  @@index([userId])
+}
