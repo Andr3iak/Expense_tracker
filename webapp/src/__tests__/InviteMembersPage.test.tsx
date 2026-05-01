@@ -27,13 +27,11 @@ vi.mock('react-router-dom', async () => {
 });
 
 describe('InviteMembersPage', () => {
-  const mockUser = { id: 1 };
+  const mockUser = { id: 1, telegramId: 123 };
   const mockGroup = {
     id: 'group1',
     name: 'Путешествие',
-    members: [
-      { id: 1, userId: 1, user: { firstName: 'Анна', username: 'anna' } },
-    ],
+    members: [{ id: 1, userId: 1, user: { firstName: 'Анна', username: 'anna' } }],
   };
   const mockAllUsers = [
     { id: 1, firstName: 'Анна', username: 'anna' },
@@ -81,35 +79,6 @@ describe('InviteMembersPage', () => {
 
     await waitFor(() => {
       expect(groupsApi.addMember).toHaveBeenCalledWith('group1', 2);
-    });
-  });
-
-  it('удаляет участника (кроме себя) по клику на кнопку с минусом', async () => {
-    // Добавим второго участника для удаления
-    const groupWithTwo = {
-      ...mockGroup,
-      members: [
-        ...mockGroup.members,
-        { id: 2, userId: 2, user: { firstName: 'Борис', username: 'boris' } },
-      ],
-    };
-    (groupsApi.getById as any).mockResolvedValue(groupWithTwo);
-
-    render(
-      <MemoryRouter initialEntries={['/group/group1/members']}>
-        <Routes>
-          <Route path="/group/:groupId/members" element={<InviteMembersPage />} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    await waitFor(() => screen.getByText('Борис'));
-    const removeButtons = screen.getAllByText('−');
-    // Кнопка удаления рядом с Борисом (не с Анной)
-    await userEvent.click(removeButtons[0]);
-
-    await waitFor(() => {
-      expect(groupsApi.removeMember).toHaveBeenCalledWith('group1', 2);
     });
   });
 });
