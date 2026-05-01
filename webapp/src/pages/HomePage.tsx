@@ -137,6 +137,17 @@ export const HomePage = () => {
             )}
           </>
         )}
+
+        <div style={{ padding: '16px 16px 8px', textAlign: 'center' }}>
+          <a
+            href="https://forms.gle/ix1a3PYK6XGqvADg7"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 13, color: C.hint, textDecoration: 'none' }}
+          >
+            Обратная связь: https://forms.gle/ix1a3PYK6XGqvADg7
+          </a>
+        </div>
       </div>
 
       {/* FAB — кнопка создания группы */}
