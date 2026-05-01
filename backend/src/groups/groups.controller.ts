@@ -72,10 +72,10 @@ export class GroupsController {
   @Post(':id/join')
   joinByInvite(
     @Param('id') groupId: string,
-    @Body() body: { telegramId: number | string; username?: string },
+    @Body() body: { telegramId: number | string; username?: string; firstName?: string },
   ) {
     if (!body.telegramId) throw new BadRequestException('telegramId is required');
-    return this.groupsService.addMemberByTelegramId(groupId, body.telegramId, body.username);
+    return this.groupsService.addMemberByTelegramId(groupId, body.telegramId, body.username, body.firstName);
   }
 
   @Get(':id/invite-preview')

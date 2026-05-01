@@ -39,7 +39,7 @@ export const HomePage = () => {
     loadGroups();
   };
 
-  const displayName = user?.username || 'User';
+  const displayName = user?.firstName || user?.username || 'User';
   const av = displayName.slice(0, 2).toUpperCase();
 
   if (loading) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;

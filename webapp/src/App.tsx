@@ -33,6 +33,7 @@ function InviteHandler() {
       .join(groupId, {
         telegramId: user.telegramId,
         username: tg?.initDataUnsafe?.user?.username,
+        firstName: tg?.initDataUnsafe?.user?.first_name,
       })
       .then(() => navigate(`/group/${groupId}`))
       .catch(() => navigate(`/group/${groupId}`)); // уже в группе — всё равно переходим

@@ -25,7 +25,7 @@ export interface BalanceInfo {
   transactions: Array<{ from: number; to: number; amount: number; fromName: string; toName: string }>;
 }
 
-export interface DbUser { id: number; telegramId: number; username?: string | null; }
+export interface DbUser { id: number; telegramId: number; username?: string | null; firstName?: string | null; }
 
 export interface AppUser { id: number; telegramId: number; username: string | null; firstName: string | null; }
 
@@ -77,7 +77,7 @@ export const groupsApi = {
     request(`/groups/${id}/archive`, { method: 'PATCH', body: JSON.stringify({ userId }) }),
   unarchive: (id: string, userId: number): Promise<{ id: string; archived: boolean }> =>
     request(`/groups/${id}/unarchive`, { method: 'PATCH', body: JSON.stringify({ userId }) }),
-  join: (groupId: string, data: { telegramId: number | string; username?: string }) =>
+  join: (groupId: string, data: { telegramId: number | string; username?: string; firstName?: string }) =>
     request(`/groups/${groupId}/join`, { method: 'POST', body: JSON.stringify(data) }),
   getInvitePreview: (groupId: string): Promise<GroupDetail> =>
     request<GroupDetail>(`/groups/${groupId}/invite-preview`),

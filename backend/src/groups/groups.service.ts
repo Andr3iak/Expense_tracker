@@ -92,7 +92,7 @@ export class GroupsService {
         username: m.user.username,
         userId: m.user.id,
         user: {
-          firstName: m.user.username,
+          firstName: m.user.firstName,
           username: m.user.username,
         },
       })),
@@ -191,6 +191,7 @@ export class GroupsService {
         id: user.id,
         telegramId: Number(user.telegramId),
         username: user.username,
+        firstName: user.firstName,
       },
     };
   }
@@ -204,14 +205,15 @@ export class GroupsService {
     groupId: string,
     telegramId: number | string,
     username?: string,
+    firstName?: string,
   ) {
     const group = await this.prisma.group.findUnique({ where: { id: groupId } });
     if (!group) throw new NotFoundException('Group not found');
 
     const user = await this.prisma.user.upsert({
       where: { telegramId: BigInt(telegramId) },
-      update: { username: username ?? undefined },
-      create: { telegramId: BigInt(telegramId), username: username ?? null },
+      update: { username: username ?? undefined, firstName: firstName ?? undefined },
+      create: { telegramId: BigInt(telegramId), username: username ?? null, firstName: firstName ?? null },
     });
 
     await this.prisma.groupMember.upsert({
@@ -227,6 +229,7 @@ export class GroupsService {
         id: user.id,
         telegramId: Number(user.telegramId),
         username: user.username,
+        firstName: user.firstName,
       },
     };
   }

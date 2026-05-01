@@ -12,8 +12,15 @@ function displayName(firstName: string | null, username: string | null, id: numb
 }
 
 function buildInviteLink(groupId: string): string {
-  const botUsername = import.meta.env.VITE_BOT_USERNAME;
-  if (botUsername) return `https://t.me/${botUsername}?startapp=join_${groupId}`;
+  const rawBot = (import.meta.env.VITE_BOT_USERNAME ?? '') as string;
+  const botName = rawBot.replace('@', '');
+  const appShortName = (import.meta.env.VITE_APP_SHORT_NAME ?? '') as string;
+  if (botName && appShortName) {
+    return `https://t.me/${botName}/${appShortName}?startapp=join_${groupId}`;
+  }
+  if (botName) {
+    return `https://t.me/${botName}?start=join_${groupId}`;
+  }
   return `${window.location.origin}?join=${groupId}`;
 }
 
@@ -177,11 +184,15 @@ export const InviteMembersPage = () => {
         </Card>
 
         {/* Добавить участника */}
-        <SLabel>Добавить</SLabel>
+        <SLabel>В приложении</SLabel>
         <Card>
           {available.length === 0 ? (
-            <div style={{ padding: 20, textAlign: 'center', color: C.hint, fontSize: 14 }}>
-              {q.trim() ? `Пользователь «${q}» не найден` : 'Все пользователи уже в группе'}
+            <div style={{ padding: '16px 20px', textAlign: 'center', color: C.hint, fontSize: 14 }}>
+              {q.trim()
+                ? `Пользователь «${q}» не найден в приложении`
+                : allUsers.length === 0 || allUsers.every((u) => memberIds.has(u.id))
+                  ? 'Поделитесь ссылкой — после перехода друзья появятся здесь'
+                  : 'Все пользователи уже в группе'}
             </div>
           ) : (
             available.map((u, i) => {
