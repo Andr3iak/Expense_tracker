@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Body, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, Query, NotFoundException, BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -27,6 +27,14 @@ export class UsersController {
       username: u.username,
       firstName: u.username,
     }));
+  }
+
+  // Только пользователи из общих групп — чтобы не светить всю базу при добавлении участника
+  @Get('known')
+  async getKnown(@Query('userId') userId: string) {
+    const id = parseInt(userId, 10);
+    if (isNaN(id)) throw new BadRequestException('userId must be a number');
+    return this.usersService.getKnownUsers(id);
   }
 
   @Get('by-telegram/:telegramId')

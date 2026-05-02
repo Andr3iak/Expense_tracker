@@ -11,6 +11,9 @@ interface ExpenseState {
   description: string;
   paidBy: number;
   category: string;
+  // Заполняются при редактировании существующего расхода
+  expenseId?: string | null;
+  existingParticipantIds?: number[] | null;
 }
 
 export const SplitModePage = () => {
@@ -18,6 +21,7 @@ export const SplitModePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const exp = location.state as ExpenseState | null;
+  const isEditing = !!exp?.expenseId;
 
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [mode, setMode] = useState<'equal' | 'selective' | 'percent'>('equal');
@@ -29,7 +33,9 @@ export const SplitModePage = () => {
     if (!groupId) return;
     groupsApi.getById(groupId).then((g) => {
       setGroup(g);
-      setSel(g.members.map((m) => m.userId));
+      // При редактировании предзаполняем участников из существующего расхода
+      const initialSel = exp?.existingParticipantIds ?? g.members.map((m) => m.userId);
+      setSel(initialSel);
       const eq = Math.round(100 / g.members.length);
       const init: Record<number, number> = {};
       g.members.forEach((m) => { init[m.userId] = eq; });
@@ -52,24 +58,36 @@ export const SplitModePage = () => {
     if (!groupId || loading || !exp) return;
     setLoading(true);
     try {
-      await expensesApi.create(groupId, {
-        amount: exp.amount,
-        description: exp.description,
-        paidBy: exp.paidBy,
-        participantIds: activeIds,
-      });
+      if (isEditing && exp.expenseId) {
+        // Редактирование — обновляем существующий расход через PATCH
+        await expensesApi.update(groupId, exp.expenseId, {
+          amount: exp.amount,
+          description: exp.description,
+          category: exp.category,
+          paidBy: exp.paidBy,
+          participantIds: activeIds,
+        });
+      } else {
+        await expensesApi.create(groupId, {
+          amount: exp.amount,
+          description: exp.description,
+          category: exp.category,
+          paidBy: exp.paidBy,
+          participantIds: activeIds,
+        });
+      }
       hapticNotification('success');
       navigate(`/group/${groupId}`);
     } finally {
       setLoading(false);
     }
-  }, [groupId, loading, activeIds, exp, navigate]);
+  }, [groupId, loading, activeIds, exp, isEditing, navigate]);
 
   const canSubmit = !loading && (mode !== 'selective' || sel.length > 0);
 
   // Хуки ВСЕГДА до любого return
   useBackButton(() => navigate(-1));
-  useMainButton('Добавить расход', handleSubmit, canSubmit);
+  useMainButton(isEditing ? 'Сохранить изменения' : 'Добавить расход', handleSubmit, canSubmit);
 
   if (!group || !exp) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
@@ -179,7 +197,7 @@ export const SplitModePage = () => {
 
         <div style={{ padding: 16 }}>
           <Btn
-            label="Добавить расход"
+            label={isEditing ? 'Сохранить изменения' : 'Добавить расход'}
             onTap={() => { hapticImpact('medium'); handleSubmit(); }}
             disabled={!canSubmit}
           />

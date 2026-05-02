@@ -15,12 +15,8 @@ function buildInviteLink(groupId: string): string {
   const rawBot = (import.meta.env.VITE_BOT_USERNAME ?? '') as string;
   const botName = rawBot.replace('@', '');
   const appShortName = (import.meta.env.VITE_APP_SHORT_NAME ?? '') as string;
-  if (botName && appShortName) {
-    return `https://t.me/${botName}/${appShortName}?startapp=join_${groupId}`;
-  }
-  if (botName) {
-    return `https://t.me/${botName}?start=join_${groupId}`;
-  }
+  if (botName && appShortName) return `https://t.me/${botName}/${appShortName}?startapp=join_${groupId}`;
+  if (botName) return `https://t.me/${botName}?start=join_${groupId}`;
   return `${window.location.origin}?join=${groupId}`;
 }
 
@@ -29,58 +25,46 @@ export const InviteMembersPage = () => {
   const navigate = useNavigate();
   const { user } = useUser();
   const [group, setGroup] = useState<GroupDetail | null>(null);
-  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
-  const [searchResults, setSearchResults] = useState<AppUser[]>([]);
+  const [knownUsers, setKnownUsers] = useState<AppUser[]>([]);
   const [q, setQ] = useState('');
-  const [searching, setSearching] = useState(false);
   const [copied, setCopied] = useState(false);
+  // userId → 'invited' | 'adding' для UI-фидбека без перезагрузки
+  const [inviteStatus, setInviteStatus] = useState<Record<number, 'inviting' | 'invited'>>({});
 
   const loadData = useCallback(async () => {
-    if (!groupId) return;
-    const [g, users] = await Promise.all([groupsApi.getById(groupId), usersApi.getAll()]);
+    if (!groupId || !user) return;
+    const [g, known] = await Promise.all([
+      groupsApi.getById(groupId),
+      // Только пользователи из общих групп — не вся база
+      usersApi.getKnown(user.id),
+    ]);
     setGroup(g);
-    setAllUsers(users);
-  }, [groupId]);
+    setKnownUsers(known);
+  }, [groupId, user?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
-
-  // Поиск по username с задержкой
-  useEffect(() => {
-    if (!q.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    setSearching(true);
-    const timer = setTimeout(async () => {
-      try {
-        // Сначала ищем локально среди загруженных пользователей
-        const local = allUsers.filter((u) =>
-          displayName(u.firstName, u.username, u.id)
-            .toLowerCase()
-            .includes(q.toLowerCase())
-        );
-        setSearchResults(local);
-      } finally {
-        setSearching(false);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [q, allUsers]);
 
   if (!group) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
   const memberIds = new Set(group.members.map((m) => m.userId));
 
-  // Показываем результаты поиска или всех незарегистрированных участников
-  const available = (q.trim() ? searchResults : allUsers).filter((u) => !memberIds.has(u.id));
+  const filtered = knownUsers.filter((u) => {
+    if (memberIds.has(u.id)) return false;
+    if (!q.trim()) return true;
+    return displayName(u.firstName, u.username, u.id).toLowerCase().includes(q.toLowerCase());
+  });
 
-  const addMember = async (userId: number) => {
-    if (!groupId) return;
+  const sendInvite = async (userId: number) => {
+    if (!groupId || !user) return;
     hapticImpact('light');
-    await groupsApi.addMember(groupId, userId);
-    hapticNotification('success');
-    await loadData();
-    setQ('');
+    setInviteStatus((s) => ({ ...s, [userId]: 'inviting' }));
+    try {
+      await groupsApi.sendInvitation(groupId, userId, user.id);
+      hapticNotification('success');
+      setInviteStatus((s) => ({ ...s, [userId]: 'invited' }));
+    } catch {
+      setInviteStatus((s) => { const next = { ...s }; delete next[userId]; return next; });
+    }
   };
 
   const removeMember = async (userId: number) => {
@@ -93,8 +77,7 @@ export const InviteMembersPage = () => {
   const handleInvite = () => {
     if (!groupId) return;
     const link = buildInviteLink(groupId);
-    const text = `Присоединяйся к группе расходов «${group.name}»!`;
-    shareLink(link, text);
+    shareLink(link, `Присоединяйся к группе расходов «${group.name}»!`);
     const hasTg = !!(window as any).Telegram?.WebApp;
     if (!hasTg) {
       setCopied(true);
@@ -112,7 +95,6 @@ export const InviteMembersPage = () => {
       />
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {/* Пригласить по ссылке */}
         <div style={{ padding: '12px 16px 4px' }}>
           <div onClick={handleInvite} style={{
             background: C.card, borderRadius: 12, padding: '13px 16px',
@@ -132,7 +114,6 @@ export const InviteMembersPage = () => {
           </div>
         </div>
 
-        {/* Поиск по username */}
         <div style={{ padding: '10px 16px' }}>
           <div style={{ background: C.card, borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ color: C.hint }}>🔍</span>
@@ -142,16 +123,10 @@ export const InviteMembersPage = () => {
               placeholder="Поиск по имени или username"
               style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, background: 'none', fontFamily: 'inherit', color: C.text }}
             />
-            {q && (
-              <span onClick={() => setQ('')} style={{ color: C.hint, cursor: 'pointer', fontSize: 18 }}>×</span>
-            )}
+            {q && <span onClick={() => setQ('')} style={{ color: C.hint, cursor: 'pointer', fontSize: 18 }}>×</span>}
           </div>
-          {searching && (
-            <div style={{ fontSize: 12, color: C.hint, marginTop: 6, paddingLeft: 4 }}>Поиск...</div>
-          )}
         </div>
 
-        {/* Текущие участники */}
         <SLabel>В группе ({group.members.length})</SLabel>
         <Card>
           {group.members.map((m, i) => {
@@ -183,35 +158,43 @@ export const InviteMembersPage = () => {
           })}
         </Card>
 
-        {/* Добавить участника */}
-        <SLabel>В приложении</SLabel>
+        {/* Пользователи из общих групп — не вся база приложения */}
+        <SLabel>Известные пользователи</SLabel>
         <Card>
-          {available.length === 0 ? (
+          {filtered.length === 0 ? (
             <div style={{ padding: '16px 20px', textAlign: 'center', color: C.hint, fontSize: 14 }}>
               {q.trim()
-                ? `Пользователь «${q}» не найден в приложении`
-                : allUsers.length === 0 || allUsers.every((u) => memberIds.has(u.id))
-                  ? 'Поделитесь ссылкой — после перехода друзья появятся здесь'
-                  : 'Все пользователи уже в группе'}
+                ? `«${q}» не найден среди ваших контактов`
+                : 'Нет знакомых пользователей. Пригласите по ссылке!'}
             </div>
           ) : (
-            available.map((u, i) => {
+            filtered.map((u, i) => {
               const name = displayName(u.firstName, u.username, u.id);
+              const status = inviteStatus[u.id];
               return (
-                <div key={u.id} onClick={() => addMember(u.id)} style={{
+                <div key={u.id} style={{
                   padding: '10px 16px',
-                  borderBottom: i < available.length - 1 ? `0.5px solid ${C.border}` : 'none',
-                  display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+                  borderBottom: i < filtered.length - 1 ? `0.5px solid ${C.border}` : 'none',
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  opacity: status === 'inviting' ? 0.5 : 1,
                 }}>
                   <Av m={{ initials: initials(name), color: avatarColor(u.id) }} size={36} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 500 }}>{name}</div>
                     {u.username && <div style={{ fontSize: 12, color: C.hint }}>@{u.username}</div>}
                   </div>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: 14, background: C.blue, color: 'white',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 300,
-                  }}>+</div>
+                  {status === 'invited' ? (
+                    <div style={{ fontSize: 12, color: C.hint }}>Приглашён ✓</div>
+                  ) : (
+                    <div
+                      onClick={() => !status && sendInvite(u.id)}
+                      style={{
+                        width: 28, height: 28, borderRadius: 14, background: C.blue, color: 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 20, fontWeight: 300, cursor: 'pointer',
+                      }}
+                    >+</div>
+                  )}
                 </div>
               );
             })

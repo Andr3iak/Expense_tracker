@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -155,5 +155,66 @@ export class GroupsService {
   async removeMember(groupId: string, userId: number) {
     await this.prisma.groupMember.deleteMany({ where: { groupId, userId } });
     return { groupId, userId, removed: true };
+  }
+
+  // Создаёт приглашение вместо прямого добавления — пользователь сам решает, вступать или нет
+  async createInvitation(groupId: string, userId: number, invitedById: number) {
+    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
+    if (!group) throw new NotFoundException('Group not found');
+
+    const inviterMembership = await this.prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId: invitedById } },
+    });
+    if (!inviterMembership) throw new ForbiddenException('You are not a member of this group');
+
+    const alreadyMember = await this.prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (alreadyMember) throw new BadRequestException('User is already a member');
+
+    await this.prisma.groupInvitation.upsert({
+      where: { groupId_userId: { groupId, userId } },
+      create: { groupId, userId, invitedById, status: 'pending' },
+      update: { status: 'pending', invitedById },
+    });
+    return { groupId, userId, status: 'pending' };
+  }
+
+  async getInvitationsForUser(userId: number) {
+    const invitations = await this.prisma.groupInvitation.findMany({
+      where: { userId, status: 'pending' },
+      include: { group: true, invitedBy: true },
+    });
+    return invitations.map((inv) => ({
+      id: inv.id,
+      groupId: inv.groupId,
+      groupName: inv.group.name,
+      groupIcon: inv.group.icon ?? '📁',
+      invitedByName: inv.invitedBy.firstName || inv.invitedBy.username || `User ${inv.invitedById}`,
+      createdAt: inv.createdAt.toISOString(),
+    }));
+  }
+
+  async acceptInvitation(invitationId: string, userId: number) {
+    const inv = await this.prisma.groupInvitation.findUnique({ where: { id: invitationId } });
+    if (!inv || inv.userId !== userId) throw new NotFoundException('Invitation not found');
+
+    await this.prisma.$transaction([
+      this.prisma.groupInvitation.update({ where: { id: invitationId }, data: { status: 'accepted' } }),
+      this.prisma.groupMember.upsert({
+        where: { groupId_userId: { groupId: inv.groupId, userId } },
+        create: { groupId: inv.groupId, userId },
+        update: {},
+      }),
+    ]);
+    return { accepted: true, groupId: inv.groupId };
+  }
+
+  async rejectInvitation(invitationId: string, userId: number) {
+    const inv = await this.prisma.groupInvitation.findUnique({ where: { id: invitationId } });
+    if (!inv || inv.userId !== userId) throw new NotFoundException('Invitation not found');
+
+    await this.prisma.groupInvitation.update({ where: { id: invitationId }, data: { status: 'rejected' } });
+    return { rejected: true };
   }
 }

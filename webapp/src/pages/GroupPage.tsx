@@ -22,6 +22,7 @@ export const GroupPage = () => {
   const [editName, setEditName] = useState('');
   const [editIcon, setEditIcon] = useState('');
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [expenseSheet, setExpenseSheet] = useState<Expense | null>(null);
 
   const loadAll = useCallback(() => {
     if (!groupId) return;
@@ -57,6 +58,14 @@ export const GroupPage = () => {
     await groupsApi.update(groupId, { name: editName.trim(), icon: editIcon || undefined, userId: user.id });
     hapticNotification('success');
     setEditSheet(false);
+    loadAll();
+  };
+
+  const handleDeleteExpense = async (expense: Expense) => {
+    if (!groupId) return;
+    if (!window.confirm(`Удалить расход «${expense.description}»?`)) return;
+    setExpenseSheet(null);
+    await expensesApi.delete(groupId, expense.id);
     loadAll();
   };
 
@@ -173,7 +182,7 @@ export const GroupPage = () => {
           )}
           {expenses.map((e, i) => (
             <div key={e.id}
-              onClick={() => navigate(`/group/${groupId}/dispute`, { state: e })}
+              onClick={() => setExpenseSheet(e)}
               style={{
                 padding: '12px 16px',
                 borderBottom: i < expenses.length - 1 ? `0.5px solid ${C.border}` : 'none',
@@ -209,7 +218,6 @@ export const GroupPage = () => {
           { icon: '⚡', label: 'Быстро',  tap: () => navigate(`/group/${groupId}/quick-add`) },
           { fab: true,                     tap: () => navigate(`/group/${groupId}/add-expense`) },
           { icon: '🔒', label: 'Закрыть', tap: () => navigate(`/group/${groupId}/close`) },
-          { icon: '💬', label: 'Чат',     tap: () => {} },
         ].map((b, i) =>
           b.fab ? (
             <button key={i} onClick={b.tap} style={{
@@ -272,6 +280,36 @@ export const GroupPage = () => {
       </Sheet>
 
       <EmojiPicker show={emojiOpen} onClose={() => setEmojiOpen(false)} onSelect={setEditIcon} />
+
+      {/* Sheet для действий над расходом */}
+      <Sheet
+        show={!!expenseSheet}
+        onClose={() => setExpenseSheet(null)}
+        title={expenseSheet ? `${expenseSheet.description} · ${expenseSheet.amount.toLocaleString('ru')} ₽` : ''}
+      >
+        <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Btn
+            label="✏️ Редактировать"
+            onTap={() => {
+              if (!expenseSheet) return;
+              navigate(`/group/${groupId}/add-expense`, { state: { expense: expenseSheet } });
+              setExpenseSheet(null);
+            }}
+          />
+          <button
+            onClick={() => expenseSheet && handleDeleteExpense(expenseSheet)}
+            style={{
+              background: '#FFF0F0', border: '1px solid #FF3B3020', borderRadius: 12,
+              padding: '13px 20px', color: '#FF3B30', fontSize: 15, fontWeight: 500,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >🗑 Удалить расход</button>
+          <button
+            onClick={() => setExpenseSheet(null)}
+            style={{ background: 'none', border: 'none', color: C.hint, fontSize: 15, padding: 10, cursor: 'pointer', fontFamily: 'inherit' }}
+          >Отмена</button>
+        </div>
+      </Sheet>
     </div>
   );
 };

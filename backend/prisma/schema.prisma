@@ -16,19 +16,25 @@ model User {
   groups              GroupMember[]
   expenses            Expense[]            @relation("PaidBy")
   expenseParticipants ExpenseParticipant[]
+  receivedInvitations GroupInvitation[]    @relation("ReceivedInvitations")
+  sentInvitations     GroupInvitation[]    @relation("SentInvitations")
+  settlementsFrom     GroupSettlement[]    @relation("SettlementsFrom")
+  settlementsTo       GroupSettlement[]    @relation("SettlementsTo")
 
   @@map("users")
 }
 
 model Group {
-  id         String        @id @default(cuid())
-  name       String
-  icon       String?
-  members    GroupMember[]
-  expenses   Expense[]
-  createdAt  DateTime      @default(now())
-  archived   Boolean       @default(false)
-  archivedAt DateTime?
+  id          String            @id @default(cuid())
+  name        String
+  icon        String?
+  members     GroupMember[]
+  expenses    Expense[]
+  invitations GroupInvitation[]
+  settlements GroupSettlement[]
+  createdAt   DateTime          @default(now())
+  archived    Boolean           @default(false)
+  archivedAt  DateTime?
 
   @@map("groups")
 }
@@ -71,6 +77,39 @@ model ExpenseParticipant {
   @@unique([expenseId, userId])
   @@index([userId])
   @@map("expense_participants")
+}
+
+// Приглашение в группу — пользователь видит его на главной и принимает/отклоняет
+model GroupInvitation {
+  id          String   @id @default(cuid())
+  groupId     String
+  userId      Int
+  invitedById Int
+  status      String   @default("pending") // pending | accepted | rejected
+  createdAt   DateTime @default(now())
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user        User     @relation("ReceivedInvitations", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy   User     @relation("SentInvitations", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId, status])
+  @@map("group_invitations")
+}
+
+// Запись о погашении долга — учитывается при расчёте балансов
+model GroupSettlement {
+  id         String   @id @default(cuid())
+  groupId    String
+  fromUserId Int
+  toUserId   Int
+  amount     Float
+  createdAt  DateTime @default(now())
+  group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fromUser   User     @relation("SettlementsFrom", fields: [fromUserId], references: [id])
+  toUser     User     @relation("SettlementsTo", fields: [toUserId], references: [id])
+
+  @@index([groupId])
+  @@map("group_settlements")
 }
 
 model RequestLog {
