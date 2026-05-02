@@ -20,15 +20,9 @@ importers:
       '@nestjs/platform-express':
         specifier: ^11.0.1
         version: 11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19)
-      '@prisma/adapter-better-sqlite3':
-        specifier: ^7.8.0
-        version: 7.8.0
       '@prisma/client':
         specifier: ^7.7.0
         version: 7.8.0(prisma@7.8.0(@types/react@19.2.14)(better-sqlite3@12.9.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.9.3))(typescript@5.9.3)
-      better-sqlite3:
-        specifier: ^12.9.0
-        version: 12.9.0
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -51,9 +45,6 @@ importers:
       '@nestjs/testing':
         specifier: ^11.0.1
         version: 11.1.19(@nestjs/common@11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/platform-express@11.1.19)
-      '@types/better-sqlite3':
-        specifier: ^7.6.13
-        version: 7.6.13
       '@types/express':
         specifier: ^5.0.0
         version: 5.0.6
@@ -762,9 +753,6 @@ packages:
     resolution: {integrity: sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
 
-  '@prisma/adapter-better-sqlite3@7.8.0':
-    resolution: {integrity: sha512-9p0HvQNaRoOaUForDcp1MPIjylmCamYQjQpEogpdesLr14g3NwAsYR3bHL9wFi8tn21TPDVQPzcZi+SxXEokSA==}
-
   '@prisma/client-runtime-utils@7.8.0':
     resolution: {integrity: sha512-5NQZztQ0oY/ADFkmd9gPuweH5A1/CCY8YQPorLLO0Mu6a87mY5gsnDkzmFmIHs9NFaLnZojzgddFVN4RpKYrdw==}
 
@@ -791,9 +779,6 @@ packages:
 
   '@prisma/dev@0.24.3':
     resolution: {integrity: sha512-ffHlQuKXZiaDt9Go0OnCTdJZrHxK0k7omJKNV86/VjpsXu5EIHZLK0T7JSWgvNlJwh56kW9JFu9v0qJciFzepg==}
-
-  '@prisma/driver-adapter-utils@7.8.0':
-    resolution: {integrity: sha512-/Q13o0ZT0rjc1Xk0Q9KhZYwuq2EW/vSbWUBKfgEKkaCuB/Sg6bqnjmTZqC5cD4d6y1vfFAEwBRzfzoSMIVJ55A==}
 
   '@prisma/engines-version@7.8.0-6.3c6e192761c0362d496ed980de936e2f3cebcd3a':
     resolution: {integrity: sha512-fJPQxCkLgA5EayWaW8eArgCvjJ+N+Kz3VyeNKMEeYiQC4alNkxRKFVAGxv/ZUzuJISKqdw+zGeDbS6mn6RCPOA==}
@@ -944,9 +929,6 @@ packages:
 
   '@types/babel__traverse@7.28.0':
     resolution: {integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==}
-
-  '@types/better-sqlite3@7.6.13':
-    resolution: {integrity: sha512-NMv9ASNARoKksWtsq/SHakpYAYnhBrQgGD8zkLYk/jaK8jUGn08CfEdTRgYhMypUQAfzSP8W6gNLe0q19/t4VA==}
 
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
@@ -4236,11 +4218,6 @@ snapshots:
 
   '@pkgr/core@0.2.9': {}
 
-  '@prisma/adapter-better-sqlite3@7.8.0':
-    dependencies:
-      '@prisma/driver-adapter-utils': 7.8.0
-      better-sqlite3: 12.9.0
-
   '@prisma/client-runtime-utils@7.8.0': {}
 
   '@prisma/client@7.8.0(prisma@7.8.0(@types/react@19.2.14)(better-sqlite3@12.9.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@5.9.3))(typescript@5.9.3)':
@@ -4284,10 +4261,6 @@ snapshots:
       zeptomatch: 2.1.0
     transitivePeerDependencies:
       - typescript
-
-  '@prisma/driver-adapter-utils@7.8.0':
-    dependencies:
-      '@prisma/debug': 7.8.0
 
   '@prisma/engines-version@7.8.0-6.3c6e192761c0362d496ed980de936e2f3cebcd3a': {}
 
@@ -4439,10 +4412,6 @@ snapshots:
   '@types/babel__traverse@7.28.0':
     dependencies:
       '@babel/types': 7.29.0
-
-  '@types/better-sqlite3@7.6.13':
-    dependencies:
-      '@types/node': 24.12.2
 
   '@types/body-parser@1.19.6':
     dependencies:
@@ -4933,10 +4902,12 @@ snapshots:
     dependencies:
       bindings: 1.5.0
       prebuild-install: 7.1.3
+    optional: true
 
   bindings@1.5.0:
     dependencies:
       file-uri-to-path: 1.0.0
+    optional: true
 
   bl@4.1.0:
     dependencies:
@@ -5058,7 +5029,8 @@ snapshots:
     dependencies:
       readdirp: 5.0.0
 
-  chownr@1.1.4: {}
+  chownr@1.1.4:
+    optional: true
 
   chrome-trace-event@1.0.4: {}
 
@@ -5169,10 +5141,12 @@ snapshots:
   decompress-response@6.0.0:
     dependencies:
       mimic-response: 3.1.0
+    optional: true
 
   dedent@1.7.2: {}
 
-  deep-extend@0.6.0: {}
+  deep-extend@0.6.0:
+    optional: true
 
   deep-is@0.1.4: {}
 
@@ -5194,7 +5168,8 @@ snapshots:
 
   destr@2.0.5: {}
 
-  detect-libc@2.1.2: {}
+  detect-libc@2.1.2:
+    optional: true
 
   detect-newline@3.1.0: {}
 
@@ -5243,6 +5218,7 @@ snapshots:
   end-of-stream@1.4.5:
     dependencies:
       once: 1.4.0
+    optional: true
 
   enhanced-resolve@5.20.1:
     dependencies:
@@ -5391,7 +5367,8 @@ snapshots:
 
   exit-x@0.2.2: {}
 
-  expand-template@2.0.3: {}
+  expand-template@2.0.3:
+    optional: true
 
   expect@30.3.0:
     dependencies:
@@ -5474,7 +5451,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  file-uri-to-path@1.0.0: {}
+  file-uri-to-path@1.0.0:
+    optional: true
 
   fill-range@7.1.1:
     dependencies:
@@ -5548,7 +5526,8 @@ snapshots:
 
   fresh@2.0.0: {}
 
-  fs-constants@1.0.0: {}
+  fs-constants@1.0.0:
+    optional: true
 
   fs-extra@10.1.0:
     dependencies:
@@ -5599,7 +5578,8 @@ snapshots:
 
   giget@3.2.0: {}
 
-  github-from-package@0.0.0: {}
+  github-from-package@0.0.0:
+    optional: true
 
   glob-parent@6.0.2:
     dependencies:
@@ -5709,7 +5689,8 @@ snapshots:
 
   inherits@2.0.4: {}
 
-  ini@1.3.8: {}
+  ini@1.3.8:
+    optional: true
 
   ipaddr.js@1.9.1: {}
 
@@ -6229,7 +6210,8 @@ snapshots:
 
   mimic-fn@2.1.0: {}
 
-  mimic-response@3.1.0: {}
+  mimic-response@3.1.0:
+    optional: true
 
   minimatch@10.2.5:
     dependencies:
@@ -6247,7 +6229,8 @@ snapshots:
 
   minipass@7.1.3: {}
 
-  mkdirp-classic@0.5.3: {}
+  mkdirp-classic@0.5.3:
+    optional: true
 
   ms@2.1.3: {}
 
@@ -6276,7 +6259,8 @@ snapshots:
     dependencies:
       lru.min: 1.1.4
 
-  napi-build-utils@2.0.0: {}
+  napi-build-utils@2.0.0:
+    optional: true
 
   napi-postinstall@0.3.4: {}
 
@@ -6289,6 +6273,7 @@ snapshots:
   node-abi@3.89.0:
     dependencies:
       semver: 7.7.4
+    optional: true
 
   node-abort-controller@3.1.1: {}
 
@@ -6438,6 +6423,7 @@ snapshots:
       simple-get: 4.0.1
       tar-fs: 2.1.4
       tunnel-agent: 0.6.0
+    optional: true
 
   prelude-ls@1.2.1: {}
 
@@ -6486,6 +6472,7 @@ snapshots:
     dependencies:
       end-of-stream: 1.4.5
       once: 1.4.0
+    optional: true
 
   punycode@2.3.1: {}
 
@@ -6517,6 +6504,7 @@ snapshots:
       ini: 1.3.8
       minimist: 1.2.8
       strip-json-comments: 2.0.1
+    optional: true
 
   react-dom@19.2.5(react@19.2.5):
     dependencies:
@@ -6668,13 +6656,15 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
-  simple-concat@1.0.1: {}
+  simple-concat@1.0.1:
+    optional: true
 
   simple-get@4.0.1:
     dependencies:
       decompress-response: 6.0.0
       once: 1.4.0
       simple-concat: 1.0.1
+    optional: true
 
   slash@3.0.0: {}
 
@@ -6743,7 +6733,8 @@ snapshots:
 
   strip-final-newline@2.0.0: {}
 
-  strip-json-comments@2.0.1: {}
+  strip-json-comments@2.0.1:
+    optional: true
 
   strip-json-comments@3.1.1: {}
 
@@ -6795,6 +6786,7 @@ snapshots:
       mkdirp-classic: 0.5.3
       pump: 3.0.4
       tar-stream: 2.2.0
+    optional: true
 
   tar-stream@2.2.0:
     dependencies:
@@ -6803,6 +6795,7 @@ snapshots:
       fs-constants: 1.0.0
       inherits: 2.0.4
       readable-stream: 3.6.2
+    optional: true
 
   terser-webpack-plugin@5.4.0(webpack@5.106.0):
     dependencies:
@@ -6914,6 +6907,7 @@ snapshots:
   tunnel-agent@0.6.0:
     dependencies:
       safe-buffer: 5.2.1
+    optional: true
 
   type-check@0.4.0:
     dependencies:
