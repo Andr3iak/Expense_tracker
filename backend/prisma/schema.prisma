@@ -70,3 +70,17 @@ model ExpenseParticipant {
   @@index([userId])
   @@map("expense_participants")
 }
+
+model RequestLog {
+  id         Int      @id @default(autoincrement())
+  method     String
+  path       String
+  statusCode Int
+  durationMs Int
+  telegramId BigInt?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
+  @@map("request_logs")
+}
