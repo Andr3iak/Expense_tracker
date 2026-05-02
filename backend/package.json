@@ -55,7 +55,7 @@
     "typescript-eslint": "^8.20.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@nestjs/core", "prisma", "unrs-resolver"]
+    "onlyBuiltDependencies": ["@nestjs/core", "@prisma/engines", "prisma", "unrs-resolver"]
   },
   "jest": {
     "moduleFileExtensions": [
