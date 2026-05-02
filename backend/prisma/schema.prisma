@@ -3,7 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  // В Prisma 7 URL задаётся не здесь, а в prisma.config.ts (для миграций)
+  // и в PrismaClient constructor (для рантайма)
+  provider = "postgresql"
 }
 
 model User {
