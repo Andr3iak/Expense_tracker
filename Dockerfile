@@ -17,5 +17,4 @@ RUN cd backend && pnpm install --frozen-lockfile=false \
 
 EXPOSE 3000
 
-# Миграции запускаются при старте контейнера, когда DATABASE_URL уже доступен
-CMD cd /app/backend && pnpm prisma migrate deploy && node dist/src/main.js
+CMD ["node", "/app/backend/dist/src/main.js"]
