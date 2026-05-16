@@ -103,4 +103,52 @@ export class ExpensesService {
       date: expense.date.toISOString(),
     };
   }
+
+  async updateExpense(
+    groupId: string,
+    expenseId: string,
+    data: { amount?: number; description?: string; category?: string; paidBy?: number; participantIds?: number[] },
+  ) {
+    const expense = await this.prisma.expense.findFirst({ where: { id: expenseId, groupId } });
+    if (!expense) throw new NotFoundException('Expense not found');
+
+    const updateData: Record<string, any> = {};
+    if (data.amount !== undefined) updateData.amount = data.amount;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.category !== undefined) updateData.category = data.category;
+    if (data.paidBy !== undefined) updateData.paidBy = data.paidBy;
+
+    if (data.participantIds !== undefined) {
+      const effectivePaidBy = data.paidBy ?? expense.paidBy;
+      const allParticipants = [...new Set([...data.participantIds, effectivePaidBy])];
+      await this.prisma.expenseParticipant.deleteMany({ where: { expenseId } });
+      updateData.participants = { create: allParticipants.map((userId) => ({ userId })) };
+    }
+
+    const updated = await this.prisma.expense.update({
+      where: { id: expenseId },
+      data: updateData,
+      include: { participants: { include: { user: true } }, paidByUser: true },
+    });
+
+    return {
+      id: updated.id,
+      groupId: updated.groupId,
+      amount: updated.amount,
+      description: updated.description,
+      category: updated.category,
+      paidBy: updated.paidBy,
+      paidByName: updated.paidByUser.username ?? `User ${updated.paidBy}`,
+      participants: updated.participants.map((p) => ({ userId: p.userId, username: p.user.username })),
+      date: updated.date.toISOString(),
+    };
+  }
+
+  async deleteExpense(groupId: string, expenseId: string) {
+    const expense = await this.prisma.expense.findFirst({ where: { id: expenseId, groupId } });
+    if (!expense) throw new NotFoundException('Expense not found');
+    await this.prisma.expenseParticipant.deleteMany({ where: { expenseId } });
+    await this.prisma.expense.delete({ where: { id: expenseId } });
+    return { deleted: true };
+  }
 }

@@ -19,6 +19,33 @@ export class GroupsController {
     return this.groupsService.getArchivedGroupsByUser(id);
   }
 
+  // Статические маршруты (invitations/...) должны быть ДО динамического :id,
+  // иначе NestJS поглощает их как значение параметра
+  @Get('invitations')
+  getInvitations(@Query('userId') userId: string) {
+    const id = parseInt(userId, 10);
+    if (isNaN(id)) throw new BadRequestException('userId must be a number');
+    return this.groupsService.getInvitationsForUser(id);
+  }
+
+  @Patch('invitations/:invitationId/accept')
+  acceptInvitation(
+    @Param('invitationId') invitationId: string,
+    @Body() body: { userId: number },
+  ) {
+    if (!body.userId) throw new BadRequestException('userId is required');
+    return this.groupsService.acceptInvitation(invitationId, body.userId);
+  }
+
+  @Patch('invitations/:invitationId/reject')
+  rejectInvitation(
+    @Param('invitationId') invitationId: string,
+    @Body() body: { userId: number },
+  ) {
+    if (!body.userId) throw new BadRequestException('userId is required');
+    return this.groupsService.rejectInvitation(invitationId, body.userId);
+  }
+
   @Post()
   create(@Body() body: { name: string; icon?: string; userId: number }) {
     if (!body.name?.trim()) throw new BadRequestException('name is required');
@@ -58,6 +85,7 @@ export class GroupsController {
     return this.groupsService.unarchiveGroup(groupId, body.userId);
   }
 
+  // Прямое добавление (используется при вступлении по ссылке)
   @Post(':id/members')
   addMember(@Param('id') groupId: string, @Body() body: { userId: number }) {
     if (!body.userId) throw new BadRequestException('userId is required');
@@ -67,6 +95,16 @@ export class GroupsController {
   @Delete(':id/members/:userId')
   removeMember(@Param('id') groupId: string, @Param('userId') userId: string) {
     return this.groupsService.removeMember(groupId, parseInt(userId, 10));
+  }
+
+  // Отправляет приглашение — пользователь принимает/отклоняет на главной
+  @Post(':id/invitations')
+  createInvitation(
+    @Param('id') groupId: string,
+    @Body() body: { userId: number; invitedById: number },
+  ) {
+    if (!body.userId || !body.invitedById) throw new BadRequestException('userId and invitedById are required');
+    return this.groupsService.createInvitation(groupId, body.userId, body.invitedById);
   }
 
   @Post(':id/join')

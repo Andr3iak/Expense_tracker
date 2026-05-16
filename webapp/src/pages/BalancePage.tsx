@@ -1,8 +1,4 @@
-// Экран балансов группы. Показывает, кто кому должен, позволяет запросить долг через Telegram.
-// API возвращает баланс каждого участника (не попарные долги):
-// отрицательный баланс = человек должен группе, положительный = группа должна ему.
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { NavBar, Card, SLabel, Av, Pill, Sheet, Btn, C } from '../components/ui';
 import { useUser } from '../context/UserContext';
@@ -11,10 +7,13 @@ import type { BalanceInfo, GroupDetail } from '../utils/api';
 import { avatarColor, initials } from '../components/ui';
 import { shareLink } from '../hooks';
 
-interface DebtItem {
-  userId: number;
+// Транзакция — минимальная единица долга между двумя конкретными людьми
+interface TxItem {
+  from: number;
+  to: number;
   amount: number;
-  userName: string;
+  fromName: string;
+  toName: string;
 }
 
 export const BalancePage = () => {
@@ -23,11 +22,10 @@ export const BalancePage = () => {
   const { user } = useUser();
   const [info, setInfo] = useState<BalanceInfo | null>(null);
   const [group, setGroup] = useState<GroupDetail | null>(null);
-  // sheet хранит выбранную строку долга для Bottom Sheet
-  const [sheet, setSheet] = useState<DebtItem | null>(null);
-  const [hidden, setHidden] = useState<Set<number>>(new Set());
+  const [sheet, setSheet] = useState<TxItem | null>(null);
+  const [settling, setSettling] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (!groupId) return;
     Promise.all([
       balancesApi.getByGroup(groupId),
@@ -38,45 +36,44 @@ export const BalancePage = () => {
     });
   }, [groupId]);
 
+  useEffect(() => { load(); }, [load]);
+
   if (!info) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
   const myId = user?.id;
   const myBalance = info.debts.find((d) => d.userId === myId)?.amount ?? 0;
-  const net = info.total;
 
-  const inDebt = info.debts.filter((d) => d.userId !== myId && d.amount < 0);
-  const owed = info.debts.filter((d) => d.userId !== myId && d.amount > 0);
-
-  const markPaid = (userId: number) => {
-    setHidden((p) => new Set([...p, userId]));
-    setSheet(null);
+  // Записываем оплату в базу — после этого перезагружаем балансы,
+  // чтобы цифры обновились без перезахода на страницу
+  const markPaid = async (tx: TxItem) => {
+    if (!groupId || settling) return;
+    setSettling(true);
+    try {
+      await balancesApi.createSettlement(groupId, tx.from, tx.to, tx.amount);
+      setSheet(null);
+      load();
+    } finally {
+      setSettling(false);
+    }
   };
 
-  // Открывает Telegram share с текстом-напоминанием о долге
-  const requestViaTelegram = (debt: DebtItem) => {
+  const requestViaTelegram = (tx: TxItem) => {
     const groupName = group?.name || 'группе расходов';
-    const amount = Math.abs(debt.amount).toLocaleString('ru');
-    const text = `${debt.userName}, ты должен ${amount} ₽ в ${groupName}`;
-    const appUrl = window.location.origin;
-    shareLink(appUrl, text);
+    const text = `${tx.fromName}, ты должен ${tx.amount.toLocaleString('ru')} ₽ → ${tx.toName} (${groupName})`;
+    shareLink(window.location.origin, text);
     setSheet(null);
   };
-
-  const visibleInDebt = inDebt.filter((d) => !hidden.has(d.userId));
-  const visibleOwed = owed.filter((d) => !hidden.has(d.userId));
-  const allClear = visibleInDebt.length === 0 && visibleOwed.length === 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: C.bg, position: 'relative' }}>
       <NavBar title="Баланс" onBack={() => navigate(`/group/${groupId}`)} />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
-        {/* Общая сумма расходов и личный баланс */}
         <div style={{ background: C.card, margin: '0 16px 16px', borderRadius: 16, padding: 20, textAlign: 'center' }}>
           <div style={{ fontSize: 13, color: C.hint, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             Итого по группе
           </div>
-          <div style={{ fontSize: 24, fontWeight: 700 }}>{net.toLocaleString('ru')} ₽</div>
+          <div style={{ fontSize: 24, fontWeight: 700 }}>{info.total.toLocaleString('ru')} ₽</div>
           {myId && (
             <div style={{ marginTop: 8 }}>
               <span style={{ fontSize: 13, color: C.hint }}>Ваш баланс: </span>
@@ -85,55 +82,31 @@ export const BalancePage = () => {
           )}
         </div>
 
-        {visibleInDebt.length > 0 && (
+        {info.transactions.length > 0 ? (
           <>
-            <SLabel>Они должны группе</SLabel>
+            <SLabel>Кто кому должен</SLabel>
             <Card>
-              {visibleInDebt.map((d, i) => (
-                <div key={d.userId} onClick={() => setSheet(d)} style={{
+              {info.transactions.map((tx, i) => (
+                <div key={i} onClick={() => setSheet(tx)} style={{
                   padding: '12px 16px',
-                  borderBottom: i < visibleInDebt.length - 1 ? `0.5px solid ${C.border}` : 'none',
+                  borderBottom: i < info.transactions.length - 1 ? `0.5px solid ${C.border}` : 'none',
                   display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
                 }}>
-                  <Av m={{ initials: initials(d.userName), color: avatarColor(d.userId) }} size={36} />
+                  <Av m={{ initials: initials(tx.fromName), color: avatarColor(tx.from) }} size={36} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500 }}>{d.userName}</div>
+                    <div style={{ fontWeight: 500 }}>
+                      {tx.fromName} <span style={{ color: C.hint, fontWeight: 400 }}>→</span> {tx.toName}
+                    </div>
                     <div style={{ fontSize: 12, color: C.hint }}>Нажмите для действий</div>
                   </div>
                   <div style={{ color: C.red, fontWeight: 700, fontSize: 16 }}>
-                    {Math.abs(d.amount).toLocaleString('ru')} ₽
+                    {tx.amount.toLocaleString('ru')} ₽
                   </div>
                 </div>
               ))}
             </Card>
           </>
-        )}
-
-        {visibleOwed.length > 0 && (
-          <>
-            <SLabel>Группа должна им</SLabel>
-            <Card>
-              {visibleOwed.map((d, i) => (
-                <div key={d.userId} onClick={() => setSheet(d)} style={{
-                  padding: '12px 16px',
-                  borderBottom: i < visibleOwed.length - 1 ? `0.5px solid ${C.border}` : 'none',
-                  display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
-                }}>
-                  <Av m={{ initials: initials(d.userName), color: avatarColor(d.userId) }} size={36} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500 }}>{d.userName}</div>
-                    <div style={{ fontSize: 12, color: C.hint }}>Нажмите для действий</div>
-                  </div>
-                  <div style={{ color: C.green, fontWeight: 700, fontSize: 16 }}>
-                    {d.amount.toLocaleString('ru')} ₽
-                  </div>
-                </div>
-              ))}
-            </Card>
-          </>
-        )}
-
-        {allClear && (
+        ) : (
           <div style={{ padding: 48, textAlign: 'center' }}>
             <div style={{ fontSize: 52, marginBottom: 14 }}>🎉</div>
             <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Всё погашено!</div>
@@ -145,11 +118,14 @@ export const BalancePage = () => {
       <Sheet
         show={!!sheet}
         onClose={() => setSheet(null)}
-        title={sheet ? `${sheet.userName} · ${Math.abs(sheet.amount).toLocaleString('ru')} ₽` : ''}
+        title={sheet ? `${sheet.fromName} → ${sheet.toName} · ${sheet.amount.toLocaleString('ru')} ₽` : ''}
       >
         <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Btn label="Отметить как оплачено" onTap={() => sheet && markPaid(sheet.userId)} />
-          {/* Отправляет напоминание через Telegram share */}
+          <Btn
+            label={settling ? 'Сохранение...' : 'Отметить как оплачено'}
+            onTap={() => sheet && markPaid(sheet)}
+            disabled={settling}
+          />
           <div
             onClick={() => sheet && requestViaTelegram(sheet)}
             style={{

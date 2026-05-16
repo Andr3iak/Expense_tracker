@@ -1,6 +1,7 @@
--- AlterTable: add archive support to groups
+-- Add archive support to groups
 ALTER TABLE "groups" ADD COLUMN "archived" BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE "groups" ADD COLUMN "archivedAt" DATETIME;
+-- TIMESTAMP(3) вместо SQLite DATETIME
+ALTER TABLE "groups" ADD COLUMN "archivedAt" TIMESTAMP(3);
 
--- AlterTable: add category to expenses
+-- Add category to expenses
 ALTER TABLE "expenses" ADD COLUMN "category" TEXT NOT NULL DEFAULT 'other';

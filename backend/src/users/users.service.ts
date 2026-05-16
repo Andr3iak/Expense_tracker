@@ -25,4 +25,29 @@ export class UsersService {
   async getAllUsers() {
     return this.prisma.user.findMany({ orderBy: { id: 'asc' } });
   }
+
+  // Возвращает только тех пользователей, с которыми userId состоит в общих группах
+  async getKnownUsers(userId: number) {
+    const myGroupIds = await this.prisma.groupMember.findMany({
+      where: { userId },
+      select: { groupId: true },
+    });
+    if (myGroupIds.length === 0) return [];
+
+    const knownMembers = await this.prisma.groupMember.findMany({
+      where: {
+        groupId: { in: myGroupIds.map((m) => m.groupId) },
+        userId: { not: userId },
+      },
+      include: { user: true },
+      distinct: ['userId'],
+    });
+
+    return knownMembers.map((m) => ({
+      id: m.user.id,
+      telegramId: Number(m.user.telegramId),
+      username: m.user.username,
+      firstName: m.user.firstName,
+    }));
+  }
 }

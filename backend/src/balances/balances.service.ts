@@ -6,13 +6,17 @@ export class BalancesService {
   constructor(private prisma: PrismaService) {}
 
   async getBalancesByGroup(groupId: string) {
-    const expenses = await this.prisma.expense.findMany({
-      where: { groupId },
-      include: {
-        participants: { include: { user: true } },
-        paidByUser: true,
-      },
-    });
+    const [expenses, settlements] = await Promise.all([
+      this.prisma.expense.findMany({
+        where: { groupId },
+        include: {
+          participants: { include: { user: true } },
+          paidByUser: true,
+        },
+      }),
+      // Загружаем записи об оплатах — они корректируют чистый баланс
+      this.prisma.groupSettlement.findMany({ where: { groupId } }),
+    ]);
 
     let total = 0;
     const net: Record<number, number> = {};
@@ -32,6 +36,12 @@ export class BalancesService {
         userNames[p.userId] = p.user.username ?? `User ${p.userId}`;
         net[p.userId] = (net[p.userId] ?? 0) - perPerson;
       }
+    }
+
+    // Применяем оплаты: fromUser заплатил toUser → долг fromUser уменьшается, кредит toUser уменьшается
+    for (const s of settlements) {
+      net[s.fromUserId] = (net[s.fromUserId] ?? 0) + s.amount;
+      net[s.toUserId] = (net[s.toUserId] ?? 0) - s.amount;
     }
 
     // Алгоритм минимизации транзакций
@@ -59,8 +69,8 @@ export class BalancesService {
         from: debt.userId,
         to: cred.userId,
         amount: Math.round(settleAmount * 100) / 100,
-        fromName: userNames[debt.userId],
-        toName: userNames[cred.userId],
+        fromName: userNames[debt.userId] ?? `User ${debt.userId}`,
+        toName: userNames[cred.userId] ?? `User ${cred.userId}`,
       });
       cred.amount -= settleAmount;
       debt.amount -= settleAmount;
@@ -72,11 +82,10 @@ export class BalancesService {
       .map(([userId, balance]) => ({
         userId: Number(userId),
         balance: Math.round(balance * 100) / 100,
-        userName: userNames[Number(userId)],
+        userName: userNames[Number(userId)] ?? `User ${userId}`,
       }))
       .filter((b) => Math.abs(b.balance) > 0.01);
 
-    // debts — для совместимости с BalancePage и CloseGroupPage
     const debts = balances.map((b) => ({
       userId: b.userId,
       amount: b.balance,
@@ -89,5 +98,12 @@ export class BalancesService {
       balances,
       transactions,
     };
+  }
+
+  async createSettlement(groupId: string, fromUserId: number, toUserId: number, amount: number) {
+    const settlement = await this.prisma.groupSettlement.create({
+      data: { groupId, fromUserId, toUserId, amount },
+    });
+    return { id: settlement.id, groupId, fromUserId, toUserId, amount };
   }
 }

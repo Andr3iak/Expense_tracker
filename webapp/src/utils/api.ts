@@ -41,6 +41,15 @@ export interface GroupDetail {
   members: GroupMember[];
 }
 
+export interface GroupInvitation {
+  id: string;
+  groupId: string;
+  groupName: string;
+  groupIcon: string;
+  invitedByName: string;
+  createdAt: string;
+}
+
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${endpoint}`, {
     headers: { 'Content-Type': 'application/json' }, ...options,
@@ -58,9 +67,9 @@ export const usersApi = {
   getByTelegramId: (telegramId: number | string): Promise<DbUser> =>
     request<DbUser>(`/users/by-telegram/${telegramId}`),
   getAll: (): Promise<AppUser[]> => request<AppUser[]>('/users'),
-  // Поиск по username
-  searchByUsername: (query: string): Promise<AppUser[]> =>
-    request<AppUser[]>(`/users/search?q=${encodeURIComponent(query)}`),
+  // Только пользователи из общих групп — безопаснее и удобнее для поиска
+  getKnown: (userId: number): Promise<AppUser[]> =>
+    request<AppUser[]>(`/users/known?userId=${userId}`),
 };
 
 export const groupsApi = {
@@ -85,6 +94,15 @@ export const groupsApi = {
     request(`/groups/${groupId}/members`, { method: 'POST', body: JSON.stringify({ userId }) }),
   removeMember: (groupId: string, userId: number): Promise<void> =>
     request(`/groups/${groupId}/members/${userId}`, { method: 'DELETE' }),
+  // Приглашения — вместо прямого добавления
+  sendInvitation: (groupId: string, userId: number, invitedById: number): Promise<void> =>
+    request(`/groups/${groupId}/invitations`, { method: 'POST', body: JSON.stringify({ userId, invitedById }) }),
+  getMyInvitations: (userId: number): Promise<GroupInvitation[]> =>
+    request<GroupInvitation[]>(`/groups/invitations?userId=${userId}`),
+  acceptInvitation: (invitationId: string, userId: number): Promise<{ accepted: boolean; groupId: string }> =>
+    request(`/groups/invitations/${invitationId}/accept`, { method: 'PATCH', body: JSON.stringify({ userId }) }),
+  rejectInvitation: (invitationId: string, userId: number): Promise<{ rejected: boolean }> =>
+    request(`/groups/invitations/${invitationId}/reject`, { method: 'PATCH', body: JSON.stringify({ userId }) }),
 };
 
 export const expensesApi = {
@@ -96,9 +114,22 @@ export const expensesApi = {
     paidBy: number; participantIds: number[];
   }): Promise<Expense> =>
     request<Expense>(`/groups/${groupId}/expenses`, { method: 'POST', body: JSON.stringify(data) }),
+  update: (groupId: string, expenseId: string, data: {
+    amount?: number; description?: string; category?: string;
+    paidBy?: number; participantIds?: number[];
+  }): Promise<Expense> =>
+    request<Expense>(`/groups/${groupId}/expenses/${expenseId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (groupId: string, expenseId: string): Promise<{ deleted: boolean }> =>
+    request(`/groups/${groupId}/expenses/${expenseId}`, { method: 'DELETE' }),
 };
 
 export const balancesApi = {
   getByGroup: (groupId: string): Promise<BalanceInfo> =>
     request<BalanceInfo>(`/groups/${groupId}/balances`),
+  // Записывает факт погашения долга — балансы автоматически обновятся при следующей загрузке
+  createSettlement: (groupId: string, fromUserId: number, toUserId: number, amount: number): Promise<void> =>
+    request(`/groups/${groupId}/balances/settlements`, {
+      method: 'POST',
+      body: JSON.stringify({ fromUserId, toUserId, amount }),
+    }),
 };
