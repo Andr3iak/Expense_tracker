@@ -47,9 +47,9 @@ describe('BalancePage', () => {
     await waitFor(() => {
   expect(screen.getByText('Итого по группе')).toBeInTheDocument();
   expect(screen.getByText(/1[\s]?250[\s]?₽/)).toBeInTheDocument();
-  expect(screen.getByText('Борис')).toBeInTheDocument();
+  expect(screen.getByText('Кто кому должен')).toBeInTheDocument();
+  expect(screen.getByText(/400[\s]?₽/)).toBeInTheDocument();
 });
-  });
 
   it('открывает bottom sheet и показывает действия', async () => {
     render(
