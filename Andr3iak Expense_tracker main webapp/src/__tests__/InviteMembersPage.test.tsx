@@ -8,10 +8,11 @@ import { groupsApi, usersApi } from '../utils/api';
 vi.mock('../context/UserContext', () => ({ useUser: vi.fn() }));
 vi.mock('../utils/api', () => ({
   groupsApi: {
-    getById: vi.fn(),
-    addMember: vi.fn(),
-    removeMember: vi.fn(),
-  },
+  getById: vi.fn(),
+  addMember: vi.fn(),
+  removeMember: vi.fn(),
+  sendInvitation: vi.fn().mockResolvedValue(undefined),  // ← добавить
+},
   usersApi: {
     getAll: vi.fn(),
     getKnown: vi.fn(),
