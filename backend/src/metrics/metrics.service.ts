@@ -34,16 +34,17 @@ export class MetricsService {
       this.prisma.requestLog.count({
         where: { createdAt: { gte: since }, statusCode: { gte: 400 } },
       }),
-      this.prisma.$queryRaw<[{ count: number }]>`
-        SELECT COUNT(DISTINCT telegramId) as count
+      // PostgreSQL: кавычки вокруг camelCase колонок, Date объект вместо строки
+      this.prisma.$queryRaw<[{ count: bigint }]>`
+        SELECT COUNT(DISTINCT "telegramId") as count
         FROM request_logs
-        WHERE createdAt >= ${since.toISOString()}
-          AND telegramId IS NOT NULL
+        WHERE "createdAt" >= ${since}
+          AND "telegramId" IS NOT NULL
       `,
       this.prisma.$queryRaw<[{ avg: number }]>`
-        SELECT AVG(durationMs) as avg
+        SELECT AVG("durationMs") as avg
         FROM request_logs
-        WHERE createdAt >= ${since.toISOString()}
+        WHERE "createdAt" >= ${since}
       `,
     ]);
 
@@ -62,16 +63,16 @@ export class MetricsService {
     since.setDate(since.getDate() - days);
 
     const rows = await this.prisma.$queryRaw<
-      Array<{ method: string; path: string; count: number; avgDuration: number; errorCount: number }>
+      Array<{ method: string; path: string; count: bigint; avgduration: number; errorcount: bigint }>
     >`
       SELECT
         method,
         path,
-        COUNT(*) as count,
-        AVG(durationMs) as avgDuration,
-        SUM(CASE WHEN statusCode >= 400 THEN 1 ELSE 0 END) as errorCount
+        COUNT(*) AS count,
+        AVG("durationMs") AS avgduration,
+        SUM(CASE WHEN "statusCode" >= 400 THEN 1 ELSE 0 END) AS errorcount
       FROM request_logs
-      WHERE createdAt >= ${since.toISOString()}
+      WHERE "createdAt" >= ${since}
       GROUP BY method, path
       ORDER BY count DESC
       LIMIT 20
@@ -81,8 +82,8 @@ export class MetricsService {
       method: r.method,
       path: r.path,
       count: Number(r.count),
-      avgDurationMs: Math.round(Number(r.avgDuration)),
-      errorCount: Number(r.errorCount),
+      avgDurationMs: Math.round(Number(r.avgduration)),
+      errorCount: Number(r.errorcount),
     }));
   }
 
@@ -90,24 +91,28 @@ export class MetricsService {
     const since = new Date();
     since.setDate(since.getDate() - days);
 
+    // PostgreSQL: DATE_TRUNC или DATE() с явным приведением к DATE
     const rows = await this.prisma.$queryRaw<
-      Array<{ date: string; requests: number; uniqueUsers: number; errors: number }>
+      Array<{ date: Date; requests: bigint; uniqueusers: bigint; errors: bigint }>
     >`
       SELECT
-        DATE(createdAt) as date,
-        COUNT(*) as requests,
-        COUNT(DISTINCT telegramId) as uniqueUsers,
-        SUM(CASE WHEN statusCode >= 400 THEN 1 ELSE 0 END) as errors
+        DATE("createdAt" AT TIME ZONE 'UTC') AS date,
+        COUNT(*) AS requests,
+        COUNT(DISTINCT "telegramId") AS uniqueusers,
+        SUM(CASE WHEN "statusCode" >= 400 THEN 1 ELSE 0 END) AS errors
       FROM request_logs
-      WHERE createdAt >= ${since.toISOString()}
-      GROUP BY DATE(createdAt)
+      WHERE "createdAt" >= ${since}
+      GROUP BY DATE("createdAt" AT TIME ZONE 'UTC')
       ORDER BY date ASC
     `;
 
     return rows.map((r) => ({
-      date: r.date,
+      // PostgreSQL возвращает Date объект, преобразуем в строку YYYY-MM-DD
+      date: r.date instanceof Date
+        ? r.date.toISOString().slice(0, 10)
+        : String(r.date),
       requests: Number(r.requests),
-      uniqueUsers: Number(r.uniqueUsers),
+      uniqueUsers: Number(r.uniqueusers),
       errors: Number(r.errors),
     }));
   }
@@ -117,27 +122,27 @@ export class MetricsService {
     since.setDate(since.getDate() - days);
 
     const rows = await this.prisma.$queryRaw<
-      Array<{ method: string; path: string; p95: number; maxDuration: number; count: number }>
+      Array<{ method: string; path: string; avgduration: number; maxduration: number; count: bigint }>
     >`
       SELECT
         method,
         path,
-        MAX(durationMs) as maxDuration,
-        AVG(durationMs) as p95,
-        COUNT(*) as count
+        MAX("durationMs") AS maxduration,
+        AVG("durationMs") AS avgduration,
+        COUNT(*) AS count
       FROM request_logs
-      WHERE createdAt >= ${since.toISOString()}
+      WHERE "createdAt" >= ${since}
       GROUP BY method, path
-      HAVING AVG(durationMs) > ${thresholdMs}
-      ORDER BY p95 DESC
+      HAVING AVG("durationMs") > ${thresholdMs}
+      ORDER BY avgduration DESC
       LIMIT 10
     `;
 
     return rows.map((r) => ({
       method: r.method,
       path: r.path,
-      avgDurationMs: Math.round(Number(r.p95)),
-      maxDurationMs: Number(r.maxDuration),
+      avgDurationMs: Math.round(Number(r.avgduration)),
+      maxDurationMs: Number(r.maxduration),
       count: Number(r.count),
     }));
   }

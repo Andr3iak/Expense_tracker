@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+// Хелпер: firstName → username → "User N"
+function displayName(user: { firstName?: string | null; username?: string | null }, fallbackId: number): string {
+  return user.firstName || user.username || `User ${fallbackId}`;
+}
+
 @Injectable()
 export class BalancesService {
   constructor(private prisma: PrismaService) {}
@@ -14,7 +19,6 @@ export class BalancesService {
           paidByUser: true,
         },
       }),
-      // Загружаем записи об оплатах — они корректируют чистый баланс
       this.prisma.groupSettlement.findMany({ where: { groupId } }),
     ]);
 
@@ -29,22 +33,21 @@ export class BalancesService {
       const perPerson = exp.amount / count;
 
       const payerId = exp.paidBy;
-      userNames[payerId] = exp.paidByUser.username ?? `User ${payerId}`;
+      // Используем displayName — firstName приоритетнее username
+      userNames[payerId] = displayName(exp.paidByUser, payerId);
       net[payerId] = (net[payerId] ?? 0) + exp.amount;
 
       for (const p of exp.participants) {
-        userNames[p.userId] = p.user.username ?? `User ${p.userId}`;
+        userNames[p.userId] = displayName(p.user, p.userId);
         net[p.userId] = (net[p.userId] ?? 0) - perPerson;
       }
     }
 
-    // Применяем оплаты: fromUser заплатил toUser → долг fromUser уменьшается, кредит toUser уменьшается
     for (const s of settlements) {
       net[s.fromUserId] = (net[s.fromUserId] ?? 0) + s.amount;
       net[s.toUserId] = (net[s.toUserId] ?? 0) - s.amount;
     }
 
-    // Алгоритм минимизации транзакций
     const creditors: { userId: number; amount: number }[] = [];
     const debtors: { userId: number; amount: number }[] = [];
 
