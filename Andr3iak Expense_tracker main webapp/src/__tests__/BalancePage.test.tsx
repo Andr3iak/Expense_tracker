@@ -24,7 +24,9 @@ describe('BalancePage', () => {
     { userId: 2, balance: -400, userName: 'Борис' },
     { userId: 3, balance: 150, userName: 'Виктор' },
   ],
-  transactions: [],  // ← добавить это
+  transactions: [
+    { from: 2, to: 3, amount: 400, fromName: 'Борис', toName: 'Виктор' },
+  ],
 };
 
   beforeEach(() => {
