@@ -81,7 +81,7 @@ describe('InviteMembersPage', () => {
     await userEvent.click(addButton);
 
     await waitFor(() => {
-      expect(groupsApi.addMember).toHaveBeenCalledWith('group1', 2);
+      expect(groupsApi.sendInvitation).toHaveBeenCalledWith('group1', 2, 1);
     });
   });
 });
