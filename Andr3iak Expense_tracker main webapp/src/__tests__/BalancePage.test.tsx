@@ -26,7 +26,6 @@ describe('BalancePage', () => {
   ],
   transactions: [],  // ← добавить это
 };
-  };
 
   beforeEach(() => {
     (useUser as any).mockReturnValue({ user: mockUser });
