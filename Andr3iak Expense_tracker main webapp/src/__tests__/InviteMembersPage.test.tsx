@@ -14,6 +14,7 @@ vi.mock('../utils/api', () => ({
   },
   usersApi: {
     getAll: vi.fn(),
+    getKnown: vi.fn(),
   },
 }));
 
@@ -44,7 +45,7 @@ describe('InviteMembersPage', () => {
     (useUser as any).mockReturnValue({ user: mockUser });
     (groupsApi.getById as any).mockResolvedValue(mockGroup);
     (usersApi.getAll as any).mockResolvedValue(mockAllUsers);
-  });
+    (usersApi.getKnown as any).mockResolvedValue(mockAllUsers);
 
   it('отображает текущих участников и список для добавления', async () => {
     render(
