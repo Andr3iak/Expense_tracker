@@ -78,7 +78,8 @@ describe('AddExpensePage', () => {
     await userEvent.click(screen.getByText('Далее →'));
 
     expect(mockNavigate).toHaveBeenCalledWith('/group/group1/split', {
-      state: { amount: 500, description: 'Кофе', category: 'other', paidBy: 1 },
-    });
+      state: { amount: 500, description: 'Кофе', category: 'other', paidBy: 1,
+         existingParticipantIds: null, expenseId: null } },
+    );
   });
 });
