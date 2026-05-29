@@ -19,11 +19,13 @@ export class ExpensesController {
       category?: string;
       paidBy: number;
       participantIds: number[];
+      splits?: Array<{ userId: number; percent: number }>;
     },
   ) {
     return this.expensesService.createExpense(
       groupId, body.amount, body.description,
       body.category ?? 'other', body.paidBy, body.participantIds,
+      body.splits,
     );
   }
 
@@ -37,6 +39,7 @@ export class ExpensesController {
       category?: string;
       paidBy?: number;
       participantIds?: number[];
+      splits?: Array<{ userId: number; percent: number }>;
     },
   ) {
     return this.expensesService.updateExpense(groupId, expenseId, body);
@@ -48,7 +51,6 @@ export class ExpensesController {
   }
 }
 
-// Отдельный контроллер для списка категорий
 import { Controller as Ctrl, Get as G } from '@nestjs/common';
 
 @Ctrl('categories')
