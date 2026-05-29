@@ -69,6 +69,8 @@ model ExpenseParticipant {
   id        String  @id @default(cuid())
   expenseId String
   userId    Int
+  percent   Float?
+  amount    Float?
   expense   Expense @relation(fields: [expenseId], references: [id])
   user      User    @relation(fields: [userId], references: [id])
 

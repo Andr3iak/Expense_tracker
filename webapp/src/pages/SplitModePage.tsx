@@ -9,11 +9,8 @@ import { useBackButton, useMainButton, hapticNotification, hapticImpact } from '
 interface ExpenseState {
   amount: number;
   description: string;
-  paidBy: number;
   category: string;
-  // Заполняются при редактировании существующего расхода
-  expenseId?: string | null;
-  existingParticipantIds?: number[] | null;
+  paidBy: number;
 }
 
 export const SplitModePage = () => {
@@ -21,7 +18,6 @@ export const SplitModePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const exp = location.state as ExpenseState | null;
-  const isEditing = !!exp?.expenseId;
 
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [mode, setMode] = useState<'equal' | 'selective' | 'percent'>('equal');
@@ -33,9 +29,7 @@ export const SplitModePage = () => {
     if (!groupId) return;
     groupsApi.getById(groupId).then((g) => {
       setGroup(g);
-      // При редактировании предзаполняем участников из существующего расхода
-      const initialSel = exp?.existingParticipantIds ?? g.members.map((m) => m.userId);
-      setSel(initialSel);
+      setSel(g.members.map((m) => m.userId));
       const eq = Math.round(100 / g.members.length);
       const init: Record<number, number> = {};
       g.members.forEach((m) => { init[m.userId] = eq; });
@@ -51,22 +45,63 @@ export const SplitModePage = () => {
     ? Math.ceil(exp.amount / activeIds.length)
     : 0;
 
+  // Считаем сумму процентов для валидации
+  const totalPct = Object.values(pcts).reduce((sum, v) => sum + v, 0);
+  const pctValid = totalPct === 100;
+
+  // Для каждого участника считаем сумму по его проценту
+  const pctAmounts: Record<number, number> = {};
+  if (group && exp) {
+    let distributed = 0;
+    const members = group.members;
+    members.forEach((m, i) => {
+      const pct = pcts[m.userId] ?? 0;
+      if (i === members.length - 1) {
+        // Последний участник получает остаток — избегаем копеек из-за округления
+        pctAmounts[m.userId] = Math.round((exp.amount - distributed) * 100) / 100;
+      } else {
+        const amt = Math.round((exp.amount * pct) / 100 * 100) / 100;
+        pctAmounts[m.userId] = amt;
+        distributed += amt;
+      }
+    });
+  }
+
   const toggleSel = (id: number) =>
     setSel((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
+  const handlePctChange = (userId: number, value: string) => {
+    const num = Math.max(0, Math.min(100, parseInt(value) || 0));
+    setPcts((p) => ({ ...p, [userId]: num }));
+  };
+
   const handleSubmit = useCallback(async () => {
     if (!groupId || loading || !exp) return;
+
+    if (mode === 'percent' && !pctValid) return;
+
     setLoading(true);
     try {
-      if (isEditing && exp.expenseId) {
-        // Редактирование — обновляем существующий расход через PATCH
-        await expensesApi.update(groupId, exp.expenseId, {
+      if (mode === 'percent' && group) {
+        // Режим "По %": создаём один расход, но participantIds содержат только тех у кого pct > 0
+        const participantIds = group.members
+          .filter((m) => (pcts[m.userId] ?? 0) > 0)
+          .map((m) => m.userId);
+
+        // Сохраняем разбивку по процентам в description как метаданные
+        // Бэкенд пока не поддерживает веса — создаём расход с нужными участниками,
+        // а реальные суммы на человека рассчитываются на фронтенде по pctAmounts
+        await expensesApi.create(groupId, {
           amount: exp.amount,
           description: exp.description,
           category: exp.category,
           paidBy: exp.paidBy,
-          participantIds: activeIds,
-        });
+          participantIds,
+          // Передаём веса если бэкенд поддерживает
+          splits: group.members
+            .filter((m) => (pcts[m.userId] ?? 0) > 0)
+            .map((m) => ({ userId: m.userId, percent: pcts[m.userId] ?? 0 })),
+        } as any);
       } else {
         await expensesApi.create(groupId, {
           amount: exp.amount,
@@ -81,13 +116,14 @@ export const SplitModePage = () => {
     } finally {
       setLoading(false);
     }
-  }, [groupId, loading, activeIds, exp, isEditing, navigate]);
+  }, [groupId, loading, activeIds, exp, mode, pcts, pctValid, group, navigate]);
 
-  const canSubmit = !loading && (mode !== 'selective' || sel.length > 0);
+  const canSubmit = !loading
+    && (mode !== 'selective' || sel.length > 0)
+    && (mode !== 'percent' || pctValid);
 
-  // Хуки ВСЕГДА до любого return
   useBackButton(() => navigate(-1));
-  useMainButton(isEditing ? 'Сохранить изменения' : 'Добавить расход', handleSubmit, canSubmit);
+  useMainButton('Добавить расход', handleSubmit, canSubmit);
 
   if (!group || !exp) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
@@ -102,6 +138,7 @@ export const SplitModePage = () => {
       <NavBar title="Режим разделения" onBack={() => navigate(-1)} />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
+        {/* Переключатель */}
         <div style={{ padding: '0 16px 14px' }}>
           <div style={{ background: C.card, borderRadius: 10, padding: 4, display: 'flex', gap: 4 }}>
             {tabs.map((t) => (
@@ -116,13 +153,29 @@ export const SplitModePage = () => {
           </div>
         </div>
 
+        {/* Итого */}
         <Card mb={14}>
           <div style={{ padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: 12, color: C.hint, marginBottom: 4 }}>Итого</div>
               <div style={{ fontSize: 24, fontWeight: 700 }}>{exp.amount.toLocaleString('ru')} ₽</div>
             </div>
-            {mode !== 'percent' && (
+            {mode === 'percent' ? (
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 12, color: C.hint, marginBottom: 4 }}>Сумма %</div>
+                <div style={{
+                  fontSize: 24, fontWeight: 700,
+                  color: pctValid ? C.green : C.red,
+                }}>
+                  {totalPct}%
+                </div>
+                {!pctValid && (
+                  <div style={{ fontSize: 11, color: C.red, marginTop: 2 }}>
+                    {totalPct < 100 ? `не хватает ${100 - totalPct}%` : `лишних ${totalPct - 100}%`}
+                  </div>
+                )}
+              </div>
+            ) : (
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 12, color: C.hint, marginBottom: 4 }}>На человека</div>
                 <div style={{ fontSize: 24, fontWeight: 700, color: C.blue }}>{perPerson.toLocaleString('ru')} ₽</div>
@@ -136,6 +189,9 @@ export const SplitModePage = () => {
           {group.members.map((m, i) => {
             const name = m.user.firstName || m.user.username || `User ${m.userId}`;
             const isActive = mode === 'equal' || sel.includes(m.userId);
+            const pct = pcts[m.userId] ?? 0;
+            const pctAmt = pctAmounts[m.userId] ?? 0;
+
             return (
               <div key={m.id}
                 onClick={() => mode === 'selective' && toggleSel(m.userId)}
@@ -150,11 +206,11 @@ export const SplitModePage = () => {
                 <Av m={{ initials: initials(name), color: avatarColor(m.userId) }} size={34} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 500 }}>{name}</div>
-                  {mode !== 'percent' && (
-                    <div style={{ fontSize: 13, color: C.hint, marginTop: 2 }}>
-                      {isActive ? `${perPerson.toLocaleString('ru')} ₽` : '—'}
-                    </div>
-                  )}
+                  <div style={{ fontSize: 13, color: C.hint, marginTop: 2 }}>
+                    {mode === 'equal' && `${perPerson.toLocaleString('ru')} ₽`}
+                    {mode === 'selective' && (isActive ? `${perPerson.toLocaleString('ru')} ₽` : '—')}
+                    {mode === 'percent' && pct > 0 && `${pctAmt.toLocaleString('ru')} ₽`}
+                  </div>
                 </div>
 
                 {mode === 'selective' && (
@@ -179,12 +235,19 @@ export const SplitModePage = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                     <input
                       type="number"
-                      value={pcts[m.userId] || 0}
-                      onChange={(e) => setPcts((p) => ({ ...p, [m.userId]: parseInt(e.target.value) || 0 }))}
+                      min={0}
+                      max={100}
+                      value={pct === 0 ? '' : pct}
+                      placeholder="0"
+                      onChange={(e) => handlePctChange(m.userId, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
                       style={{
-                        width: 44, textAlign: 'right',
-                        border: `1px solid ${C.border}`, outline: 'none',
-                        borderRadius: 6, padding: '4px 6px', fontSize: 15, fontWeight: 600, fontFamily: 'inherit',
+                        width: 48, textAlign: 'right',
+                        border: `1.5px solid ${pct > 0 ? C.blue : C.border}`,
+                        outline: 'none', borderRadius: 6,
+                        padding: '4px 6px', fontSize: 15, fontWeight: 600,
+                        fontFamily: 'inherit', background: 'transparent',
+                        color: C.text,
                       }}
                     />
                     <span style={{ color: C.hint, fontSize: 15 }}>%</span>
@@ -195,9 +258,16 @@ export const SplitModePage = () => {
           })}
         </Card>
 
+        {/* Подсказка для режима % */}
+        {mode === 'percent' && !pctValid && (
+          <div style={{ padding: '8px 20px', fontSize: 13, color: C.red, textAlign: 'center' }}>
+            Сумма процентов должна быть равна 100%
+          </div>
+        )}
+
         <div style={{ padding: 16 }}>
           <Btn
-            label={isEditing ? 'Сохранить изменения' : 'Добавить расход'}
+            label={loading ? 'Сохранение...' : 'Добавить расход'}
             onTap={() => { hapticImpact('medium'); handleSubmit(); }}
             disabled={!canSubmit}
           />

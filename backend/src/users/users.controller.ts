@@ -9,12 +9,17 @@ export class UsersController {
   async upsert(
     @Body() body: { telegramId: number | string; username?: string; firstName?: string },
   ) {
-    const user = await this.usersService.upsertUser(body.telegramId, body.username ?? body.firstName);
+    // Передаём username и firstName раздельно — не теряем имя
+    const user = await this.usersService.upsertUser(
+      body.telegramId,
+      body.username,
+      body.firstName,
+    );
     return {
       id: user.id,
       telegramId: Number(user.telegramId),
       username: user.username,
-      firstName: user.username,
+      firstName: user.firstName, // ← было user.username
     };
   }
 
@@ -25,11 +30,10 @@ export class UsersController {
       id: u.id,
       telegramId: Number(u.telegramId),
       username: u.username,
-      firstName: u.username,
+      firstName: u.firstName, // ← было u.username
     }));
   }
 
-  // Только пользователи из общих групп — чтобы не светить всю базу при добавлении участника
   @Get('known')
   async getKnown(@Query('userId') userId: string) {
     const id = parseInt(userId, 10);
@@ -45,7 +49,7 @@ export class UsersController {
       id: user.id,
       telegramId: Number(user.telegramId),
       username: user.username,
-      firstName: user.username,
+      firstName: user.firstName, // ← было user.username
     };
   }
 }
