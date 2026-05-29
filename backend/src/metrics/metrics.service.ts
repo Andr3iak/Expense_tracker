@@ -35,15 +35,15 @@ export class MetricsService {
         where: { createdAt: { gte: since }, statusCode: { gte: 400 } },
       }),
       this.prisma.$queryRaw<[{ count: number }]>`
-        SELECT COUNT(DISTINCT telegramId) as count
+        SELECT COUNT(DISTINCT "telegramId") as count
         FROM request_logs
-        WHERE createdAt >= ${since.toISOString()}
-          AND telegramId IS NOT NULL
+        WHERE "createdAt" >= ${since}
+          AND "telegramId" IS NOT NULL
       `,
       this.prisma.$queryRaw<[{ avg: number }]>`
-        SELECT AVG(durationMs) as avg
+        SELECT AVG("durationMs") as avg
         FROM request_logs
-        WHERE createdAt >= ${since.toISOString()}
+        WHERE "createdAt" >= ${since}
       `,
     ]);
 
@@ -68,10 +68,10 @@ export class MetricsService {
         method,
         path,
         COUNT(*) as count,
-        AVG(durationMs) as avgDuration,
-        SUM(CASE WHEN statusCode >= 400 THEN 1 ELSE 0 END) as errorCount
+        AVG("durationMs") as "avgDuration",
+        SUM(CASE WHEN "statusCode" >= 400 THEN 1 ELSE 0 END) as "errorCount"
       FROM request_logs
-      WHERE createdAt >= ${since.toISOString()}
+      WHERE "createdAt" >= ${since}
       GROUP BY method, path
       ORDER BY count DESC
       LIMIT 20
@@ -94,13 +94,13 @@ export class MetricsService {
       Array<{ date: string; requests: number; uniqueUsers: number; errors: number }>
     >`
       SELECT
-        DATE(createdAt) as date,
+        DATE("createdAt") as date,
         COUNT(*) as requests,
-        COUNT(DISTINCT telegramId) as uniqueUsers,
-        SUM(CASE WHEN statusCode >= 400 THEN 1 ELSE 0 END) as errors
+        COUNT(DISTINCT "telegramId") as "uniqueUsers",
+        SUM(CASE WHEN "statusCode" >= 400 THEN 1 ELSE 0 END) as errors
       FROM request_logs
-      WHERE createdAt >= ${since.toISOString()}
-      GROUP BY DATE(createdAt)
+      WHERE "createdAt" >= ${since}
+      GROUP BY DATE("createdAt")
       ORDER BY date ASC
     `;
 
@@ -122,13 +122,13 @@ export class MetricsService {
       SELECT
         method,
         path,
-        MAX(durationMs) as maxDuration,
-        AVG(durationMs) as p95,
+        MAX("durationMs") as "maxDuration",
+        AVG("durationMs") as p95,
         COUNT(*) as count
       FROM request_logs
-      WHERE createdAt >= ${since.toISOString()}
+      WHERE "createdAt" >= ${since}
       GROUP BY method, path
-      HAVING AVG(durationMs) > ${thresholdMs}
+      HAVING AVG("durationMs") > ${thresholdMs}
       ORDER BY p95 DESC
       LIMIT 10
     `;
