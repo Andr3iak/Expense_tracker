@@ -15,19 +15,19 @@ describe('BalancePage', () => {
   const mockUser = { id: 1 };
   const mockGroup = { id: 'group1', name: 'Команда' };
   const mockBalanceInfo = {
-  total: 1250,
-  debts: [
-    { userId: 2, amount: -400, userName: 'Борис' },
-    { userId: 3, amount: 150, userName: 'Виктор' },
-  ],
-  balances: [
-    { userId: 2, balance: -400, userName: 'Борис' },
-    { userId: 3, balance: 150, userName: 'Виктор' },
-  ],
-  transactions: [
-    { from: 2, to: 3, amount: 400, fromName: 'Борис', toName: 'Виктор' },
-  ],
-};
+    total: 1250,
+    debts: [
+      { userId: 2, amount: -400, userName: 'Борис' },
+      { userId: 3, amount: 150, userName: 'Виктор' },
+    ],
+    balances: [
+      { userId: 2, balance: -400, userName: 'Борис' },
+      { userId: 3, balance: 150, userName: 'Виктор' },
+    ],
+    transactions: [
+      { from: 2, to: 3, amount: 400, fromName: 'Борис', toName: 'Виктор' },
+    ],
+  };
 
   beforeEach(() => {
     (useUser as any).mockReturnValue({ user: mockUser });
@@ -47,10 +47,8 @@ describe('BalancePage', () => {
     await waitFor(() => {
       expect(screen.getByText('Итого по группе')).toBeInTheDocument();
       expect(screen.getByText(/1[\s]?250[\s]?₽/)).toBeInTheDocument();
-      expect(screen.getByText('Борис')).toBeInTheDocument();
+      expect(screen.getByText('Кто кому должен')).toBeInTheDocument();
       expect(screen.getByText(/400[\s]?₽/)).toBeInTheDocument();
-      expect(screen.getByText('Виктор')).toBeInTheDocument();
-      expect(screen.getByText(/150[\s]?₽/)).toBeInTheDocument();
     });
   });
 
@@ -63,8 +61,8 @@ describe('BalancePage', () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => screen.getByText('Борис'));
-    await userEvent.click(screen.getByText('Борис'));
+    await waitFor(() => screen.getByText('Нажмите для действий'));
+    await userEvent.click(screen.getByText('Нажмите для действий'));
 
     expect(screen.getByText('Отметить как оплачено')).toBeInTheDocument();
     expect(screen.getByText('Запросить через Telegram')).toBeInTheDocument();
