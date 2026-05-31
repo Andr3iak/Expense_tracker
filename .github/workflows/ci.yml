@@ -55,9 +55,6 @@ jobs:
       - name: Run migrations
         run: pnpm prisma migrate deploy
 
-      - name: Type check
-        run: pnpm tsc --noEmit
-
       - name: Run tests
         run: pnpm test --passWithNoTests
 

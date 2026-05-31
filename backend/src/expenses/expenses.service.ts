@@ -43,7 +43,7 @@ export class ExpensesService {
       description: exp.description,
       category: exp.category,
       paidBy: exp.paidBy,
-      paidByName: exp.paidByUser.username ?? `User ${exp.paidBy}`,
+      paidByName: exp.paidByUser.firstName ?? exp.paidByUser.username ?? `User ${exp.paidBy}`,
       participants: exp.participants.map((p) => ({
         userId: p.userId,
         username: p.user.username,
@@ -119,7 +119,7 @@ export class ExpensesService {
       description: expense.description,
       category: expense.category,
       paidBy: expense.paidBy,
-      paidByName: expense.paidByUser.username ?? `User ${expense.paidBy}`,
+      paidByName: expense.paidByUser.firstName ?? expense.paidByUser.username ?? `User ${expense.paidBy}`,
       participants: expense.participants.map((p) => ({
         userId: p.userId,
         username: p.user.username,
@@ -187,7 +187,7 @@ export class ExpensesService {
       description: updated.description,
       category: updated.category,
       paidBy: updated.paidBy,
-      paidByName: updated.paidByUser.username ?? `User ${updated.paidBy}`,
+      paidByName: updated.paidByUser.firstName ?? updated.paidByUser.username ?? `User ${updated.paidBy}`,
       participants: updated.participants.map((p) => ({
         userId: p.userId,
         username: p.user.username,
