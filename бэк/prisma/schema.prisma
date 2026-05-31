@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                  Int                  @id @default(autoincrement())
+  telegramId          BigInt               @unique
+  username            String?
+  firstName           String?
+  groups              GroupMember[]
+  expenses            Expense[]            @relation("PaidBy")
+  expenseParticipants ExpenseParticipant[]
+  receivedInvitations GroupInvitation[]    @relation("ReceivedInvitations")
+  sentInvitations     GroupInvitation[]    @relation("SentInvitations")
+  settlementsFrom     GroupSettlement[]    @relation("SettlementsFrom")
+  settlementsTo       GroupSettlement[]    @relation("SettlementsTo")
+
+  @@map("users")
+}
+
+model Group {
+  id          String            @id @default(cuid())
+  name        String
+  icon        String?
+  members     GroupMember[]
+  expenses    Expense[]
+  invitations GroupInvitation[]
+  settlements GroupSettlement[]
+  createdAt   DateTime          @default(now())
+  archived    Boolean           @default(false)
+  archivedAt  DateTime?
+
+  @@map("groups")
+}
+
+model Expense {
+  id           String               @id @default(cuid())
+  groupId      String
+  amount       Float
+  description  String
+  category     String               @default("other")
+  paidBy       Int
+  participants ExpenseParticipant[]
+  date         DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  group        Group                @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidByUser   User                 @relation("PaidBy", fields: [paidBy], references: [id])
+
+  @@map("expenses")
+}
+
+model GroupMember {
+  id      String @id @default(cuid())
+  groupId String
+  userId  Int
+  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+model ExpenseParticipant {
+  id        String  @id @default(cuid())
+  expenseId String
+  userId    Int
+  expense   Expense @relation(fields: [expenseId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([expenseId, userId])
+  @@index([userId])
+  @@map("expense_participants")
+}
+
+// Приглашение в группу — пользователь видит его на главной и принимает/отклоняет
+model GroupInvitation {
+  id          String   @id @default(cuid())
+  groupId     String
+  userId      Int
+  invitedById Int
+  status      String   @default("pending") // pending | accepted | rejected
+  createdAt   DateTime @default(now())
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user        User     @relation("ReceivedInvitations", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy   User     @relation("SentInvitations", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId, status])
+  @@map("group_invitations")
+}
+
+// Запись о погашении долга — учитывается при расчёте балансов
+model GroupSettlement {
+  id         String   @id @default(cuid())
+  groupId    String
+  fromUserId Int
+  toUserId   Int
+  amount     Float
+  createdAt  DateTime @default(now())
+  group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fromUser   User     @relation("SettlementsFrom", fields: [fromUserId], references: [id])
+  toUser     User     @relation("SettlementsTo", fields: [toUserId], references: [id])
+
+  @@index([groupId])
+  @@map("group_settlements")
+}
+
+model RequestLog {
+  id         Int      @id @default(autoincrement())
+  method     String
+  path       String
+  statusCode Int
+  durationMs Int
+  telegramId BigInt?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
+  @@map("request_logs")
+}

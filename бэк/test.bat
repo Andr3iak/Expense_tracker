@@ -1,0 +1,6 @@
+@echo off
+set NODE_ENV=test
+echo Setting up test database...
+npx prisma migrate deploy
+echo Running tests...
+npx jest %1
