@@ -60,7 +60,7 @@ export class GroupsService {
         username: m.user.username,
         userId: m.user.id,
         user: {
-          firstName: m.user.username, // в БД нет firstName — используем username
+          firstName: m.user.firstName ?? m.user.username,
           username: m.user.username,
         },
       })),
