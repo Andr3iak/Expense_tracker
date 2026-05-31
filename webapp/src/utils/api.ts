@@ -1,5 +1,11 @@
 const API_BASE = '/api';
 
+let _initData: string | null = null;
+
+export function setInitData(data: string): void {
+  _initData = data;
+}
+
 export interface ApiError { message: string; status: number; }
 
 export interface Group {
@@ -51,8 +57,11 @@ export interface GroupInvitation {
 }
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (_initData) headers['x-telegram-init-data'] = _initData;
+
   const res = await fetch(`${API_BASE}${endpoint}`, {
-    headers: { 'Content-Type': 'application/json' }, ...options,
+    headers, ...options,
   });
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
