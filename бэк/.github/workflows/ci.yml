@@ -5,6 +5,7 @@ on:
     branches: [main, master, dev, son-backend-autotests]
   pull_request:
     branches: [main, master, dev]
+  workflow_dispatch:
 
 jobs:
   test:
