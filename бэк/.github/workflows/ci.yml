@@ -1,4 +1,4 @@
-name: CI — Backend Tests
+name: CI - Backend Tests
 
 on:
   push:
@@ -10,6 +10,9 @@ jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: бэк
 
     steps:
       - name: Checkout code
