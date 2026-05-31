@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { setInitData } from '../utils/api';
 
 export interface TelegramUser {
   id: number;
@@ -21,6 +22,7 @@ export const useTelegramAuth = () => {
       const initData = telegram.initData;
       const initDataUnsafe = telegram.initDataUnsafe;
       setInitDataRaw(initData);
+      setInitData(initData);
       if (initDataUnsafe?.user) {
         const u = initDataUnsafe.user;
         setUser({

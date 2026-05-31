@@ -7,9 +7,10 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { BalancesModule } from './balances/balances.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { MetricsInterceptor } from './metrics/metrics.interceptor';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
-  imports: [PrismaModule, UsersModule, GroupsModule, ExpensesModule, BalancesModule, MetricsModule],
+  imports: [AuthModule, PrismaModule, UsersModule, GroupsModule, ExpensesModule, BalancesModule, MetricsModule],
   providers: [
     {
       provide: APP_INTERCEPTOR,
