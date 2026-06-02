@@ -1,0 +1,64 @@
+import { Controller, Get, Post, Patch, Delete, Param, Body } from '@nestjs/common';
+import { ExpensesService } from './expenses.service';
+
+@Controller('groups/:groupId/expenses')
+export class ExpensesController {
+  constructor(private expensesService: ExpensesService) {}
+
+  @Get()
+  getByGroup(@Param('groupId') groupId: string) {
+    return this.expensesService.getExpensesByGroup(groupId);
+  }
+
+  @Post()
+  create(
+    @Param('groupId') groupId: string,
+    @Body() body: {
+      amount: number;
+      description: string;
+      category?: string;
+      paidBy: number;
+      participantIds: number[];
+      splits?: Array<{ userId: number; percent: number }>;
+    },
+  ) {
+    return this.expensesService.createExpense(
+      groupId, body.amount, body.description,
+      body.category ?? 'other', body.paidBy, body.participantIds,
+      body.splits,
+    );
+  }
+
+  @Patch(':expenseId')
+  update(
+    @Param('groupId') groupId: string,
+    @Param('expenseId') expenseId: string,
+    @Body() body: {
+      amount?: number;
+      description?: string;
+      category?: string;
+      paidBy?: number;
+      participantIds?: number[];
+      splits?: Array<{ userId: number; percent: number }>;
+    },
+  ) {
+    return this.expensesService.updateExpense(groupId, expenseId, body);
+  }
+
+  @Delete(':expenseId')
+  remove(@Param('groupId') groupId: string, @Param('expenseId') expenseId: string) {
+    return this.expensesService.deleteExpense(groupId, expenseId);
+  }
+}
+
+import { Controller as Ctrl, Get as G } from '@nestjs/common';
+
+@Ctrl('categories')
+export class CategoriesController {
+  constructor(private expensesService: ExpensesService) {}
+
+  @G()
+  getAll() {
+    return this.expensesService.getCategories();
+  }
+}
