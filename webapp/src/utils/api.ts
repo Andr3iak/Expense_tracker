@@ -121,11 +121,13 @@ export const expensesApi = {
   create: (groupId: string, data: {
     amount: number; description: string; category?: string;
     paidBy: number; participantIds: number[];
+    splits?: Array<{ userId: number; percent: number }>;
   }): Promise<Expense> =>
     request<Expense>(`/groups/${groupId}/expenses`, { method: 'POST', body: JSON.stringify(data) }),
   update: (groupId: string, expenseId: string, data: {
     amount?: number; description?: string; category?: string;
     paidBy?: number; participantIds?: number[];
+    splits?: Array<{ userId: number; percent: number }>;
   }): Promise<Expense> =>
     request<Expense>(`/groups/${groupId}/expenses/${expenseId}`, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (groupId: string, expenseId: string): Promise<{ deleted: boolean }> =>

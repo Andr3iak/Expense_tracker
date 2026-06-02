@@ -12,6 +12,8 @@ interface ExpenseState {
   description: string;
   category: string;
   paidBy: number;
+  expenseId?: string | null;
+  existingParticipantIds?: number[] | null;
 }
 
 export const SplitModePage = () => {
@@ -31,7 +33,8 @@ export const SplitModePage = () => {
     if (!groupId || !user) return;
     groupsApi.getById(groupId).then((g) => {
       setGroup(g);
-      setSel(g.members.map((m) => m.userId));
+      const preselected = exp?.existingParticipantIds ?? g.members.map((m) => m.userId);
+      setSel(preselected);
       const eq = Math.round(100 / g.members.length);
       const init: Record<number, number> = {};
       g.members.forEach((m) => { init[m.userId] = eq; });
@@ -86,34 +89,33 @@ export const SplitModePage = () => {
 
     setLoading(true);
     try {
+      const isEditing = !!exp.expenseId;
+      const baseData = {
+        amount: exp.amount,
+        description: exp.description,
+        category: exp.category,
+        paidBy: exp.paidBy,
+      };
+
       if (mode === 'percent' && group) {
-        // Режим "По %": создаём один расход, но participantIds содержат только тех у кого pct > 0
         const participantIds = group.members
           .filter((m) => (pcts[m.userId] ?? 0) > 0)
           .map((m) => m.userId);
+        const splits = group.members
+          .filter((m) => (pcts[m.userId] ?? 0) > 0)
+          .map((m) => ({ userId: m.userId, percent: pcts[m.userId] ?? 0 }));
 
-        // Сохраняем разбивку по процентам в description как метаданные
-        // Бэкенд пока не поддерживает веса — создаём расход с нужными участниками,
-        // а реальные суммы на человека рассчитываются на фронтенде по pctAmounts
-        await expensesApi.create(groupId, {
-          amount: exp.amount,
-          description: exp.description,
-          category: exp.category,
-          paidBy: exp.paidBy,
-          participantIds,
-          // Передаём веса если бэкенд поддерживает
-          splits: group.members
-            .filter((m) => (pcts[m.userId] ?? 0) > 0)
-            .map((m) => ({ userId: m.userId, percent: pcts[m.userId] ?? 0 })),
-        } as any);
+        if (isEditing) {
+          await expensesApi.update(groupId, exp.expenseId!, { ...baseData, participantIds, splits });
+        } else {
+          await expensesApi.create(groupId, { ...baseData, participantIds, splits });
+        }
       } else {
-        await expensesApi.create(groupId, {
-          amount: exp.amount,
-          description: exp.description,
-          category: exp.category,
-          paidBy: exp.paidBy,
-          participantIds: activeIds,
-        });
+        if (isEditing) {
+          await expensesApi.update(groupId, exp.expenseId!, { ...baseData, participantIds: activeIds });
+        } else {
+          await expensesApi.create(groupId, { ...baseData, participantIds: activeIds });
+        }
       }
       hapticNotification('success');
       navigate(`/group/${groupId}`);
