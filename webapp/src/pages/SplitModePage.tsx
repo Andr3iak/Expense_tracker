@@ -5,6 +5,7 @@ import { groupsApi, expensesApi } from '../utils/api';
 import type { GroupDetail } from '../utils/api';
 import { avatarColor, initials } from '../components/ui';
 import { useBackButton, useMainButton, hapticNotification, hapticImpact } from '../hooks';
+import { useUser } from '../context/UserContext';
 
 interface ExpenseState {
   amount: number;
@@ -17,6 +18,7 @@ export const SplitModePage = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useUser();
   const exp = location.state as ExpenseState | null;
 
   const [group, setGroup] = useState<GroupDetail | null>(null);
@@ -26,7 +28,7 @@ export const SplitModePage = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!groupId) return;
+    if (!groupId || !user) return;
     groupsApi.getById(groupId).then((g) => {
       setGroup(g);
       setSel(g.members.map((m) => m.userId));
@@ -34,8 +36,10 @@ export const SplitModePage = () => {
       const init: Record<number, number> = {};
       g.members.forEach((m) => { init[m.userId] = eq; });
       setPcts(init);
+    }).catch((err) => {
+      console.error('Ошибка загрузки группы:', err);
     });
-  }, [groupId]);
+  }, [groupId, user]);
 
   const activeIds = group
     ? (mode === 'equal' ? group.members.map((m) => m.userId) : sel)

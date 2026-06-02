@@ -1,4 +1,4 @@
-﻿import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { InviteMembersPage } from '../pages/InviteMembersPage';
@@ -11,9 +11,10 @@ vi.mock('../utils/api', () => ({
     getById: vi.fn(),
     addMember: vi.fn(),
     removeMember: vi.fn(),
+    sendInvitation: vi.fn(),
   },
   usersApi: {
-    getAll: vi.fn(),
+    getKnown: vi.fn(),
   },
 }));
 
@@ -34,7 +35,6 @@ describe('InviteMembersPage', () => {
     members: [{ id: 1, userId: 1, user: { firstName: 'Анна', username: 'anna' } }],
   };
   const mockAllUsers = [
-    { id: 1, firstName: 'Анна', username: 'anna' },
     { id: 2, firstName: 'Борис', username: 'boris' },
     { id: 3, firstName: 'Виктор', username: 'viktor' },
   ];
@@ -43,10 +43,11 @@ describe('InviteMembersPage', () => {
     vi.clearAllMocks();
     (useUser as any).mockReturnValue({ user: mockUser });
     (groupsApi.getById as any).mockResolvedValue(mockGroup);
-    (usersApi.getAll as any).mockResolvedValue(mockAllUsers);
+    (usersApi.getKnown as any).mockResolvedValue(mockAllUsers);
+    (groupsApi.sendInvitation as any).mockResolvedValue({});
   });
 
-  it('отображает текущих участников и список для добавления', async () => {
+  it('отображает текущих участников и известных пользователей', async () => {
     render(
       <MemoryRouter initialEntries={['/group/group1/members']}>
         <Routes>
@@ -58,13 +59,13 @@ describe('InviteMembersPage', () => {
     await waitFor(() => {
       expect(screen.getByText('В группе (1)')).toBeInTheDocument();
       expect(screen.getByText('Анна (вы)')).toBeInTheDocument();
-      expect(screen.getByText('Добавить')).toBeInTheDocument();
+      expect(screen.getByText('Известные пользователи')).toBeInTheDocument();
       expect(screen.getByText('Борис')).toBeInTheDocument();
       expect(screen.getByText('Виктор')).toBeInTheDocument();
     });
   });
 
-  it('добавляет нового участника по клику на +', async () => {
+  it('отправляет приглашение по клику на +', async () => {
     render(
       <MemoryRouter initialEntries={['/group/group1/members']}>
         <Routes>
@@ -78,7 +79,7 @@ describe('InviteMembersPage', () => {
     await userEvent.click(addButton);
 
     await waitFor(() => {
-      expect(groupsApi.addMember).toHaveBeenCalledWith('group1', 2);
+      expect(groupsApi.sendInvitation).toHaveBeenCalledWith('group1', 2, 1);
     });
   });
 });
