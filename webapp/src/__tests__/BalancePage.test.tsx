@@ -1,4 +1,4 @@
-﻿import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { BalancePage } from '../pages/BalancePage';
@@ -7,7 +7,10 @@ import { balancesApi, groupsApi } from '../utils/api';
 
 vi.mock('../context/UserContext', () => ({ useUser: vi.fn() }));
 vi.mock('../utils/api', () => ({
-  balancesApi: { getByGroup: vi.fn() },
+  balancesApi: {
+    getByGroup: vi.fn(),
+    createSettlement: vi.fn(),
+  },
   groupsApi: { getById: vi.fn() },
 }));
 
@@ -16,19 +19,21 @@ describe('BalancePage', () => {
   const mockGroup = { id: 'group1', name: 'Команда' };
   const mockBalanceInfo = {
     total: 1250,
-    debts: [
-      { userId: 2, amount: -400, userName: 'Борис' },
-      { userId: 3, amount: 150, userName: 'Виктор' },
+    debts: [],
+    transactions: [
+      { from: 2, to: 1, amount: 400, fromName: 'Борис', toName: 'Анна' },
     ],
   };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     (useUser as any).mockReturnValue({ user: mockUser });
     (balancesApi.getByGroup as any).mockResolvedValue(mockBalanceInfo);
     (groupsApi.getById as any).mockResolvedValue(mockGroup);
+    (balancesApi.createSettlement as any).mockResolvedValue({});
   });
 
-  it('отображает общую сумму и балансы участников', async () => {
+  it('отображает общую сумму', async () => {
     render(
       <MemoryRouter initialEntries={['/group/group1/balance']}>
         <Routes>
@@ -39,15 +44,13 @@ describe('BalancePage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Итого по группе')).toBeInTheDocument();
-      expect(screen.getByText(/1[\s]?250[\s]?₽/)).toBeInTheDocument();
-      expect(screen.getByText('Борис')).toBeInTheDocument();
-      expect(screen.getByText(/400[\s]?₽/)).toBeInTheDocument();
-      expect(screen.getByText('Виктор')).toBeInTheDocument();
-      expect(screen.getByText(/150[\s]?₽/)).toBeInTheDocument();
+      expect(screen.getByText(/1\s*250\s*₽/)).toBeInTheDocument();
+      expect(screen.getByText('Кто кому должен')).toBeInTheDocument();
+      expect(screen.getByText(/400\s*₽/)).toBeInTheDocument();
     });
   });
 
-  it('открывает bottom sheet и показывает действия', async () => {
+  it('открывает bottom sheet по клику на строку транзакции', async () => {
     render(
       <MemoryRouter initialEntries={['/group/group1/balance']}>
         <Routes>
@@ -56,8 +59,8 @@ describe('BalancePage', () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => screen.getByText('Борис'));
-    await userEvent.click(screen.getByText('Борис'));
+    await waitFor(() => screen.getByText('Нажмите для действий'));
+    await userEvent.click(screen.getByText('Нажмите для действий'));
 
     expect(screen.getByText('Отметить как оплачено')).toBeInTheDocument();
     expect(screen.getByText('Запросить через Telegram')).toBeInTheDocument();
