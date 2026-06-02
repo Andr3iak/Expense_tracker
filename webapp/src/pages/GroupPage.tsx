@@ -13,8 +13,9 @@ function memberDisplayName(user: { username: string | null; firstName: string | 
 export const GroupPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const [group, setGroup] = useState<GroupDetail | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [balanceInfo, setBalanceInfo] = useState<BalanceInfo>({ total: 0, debts: [], balances: [], transactions: [] });
   const [q, setQ] = useState('');
@@ -25,7 +26,8 @@ export const GroupPage = () => {
   const [expenseSheet, setExpenseSheet] = useState<Expense | null>(null);
 
   const loadAll = useCallback(() => {
-    if (!groupId) return;
+    if (!groupId || userLoading) return;
+    setLoadError(null);
     Promise.all([
       groupsApi.getById(groupId),
       expensesApi.getByGroup(groupId),
@@ -34,12 +36,23 @@ export const GroupPage = () => {
       setGroup(g);
       setExpenses(exps);
       setBalanceInfo(bal);
+    }).catch((err: Error) => {
+      setLoadError(err.message || 'Ошибка загрузки группы');
     });
-  }, [groupId]);
+  }, [groupId, userLoading]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  if (!group) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
+  if (userLoading || (!group && !loadError)) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
+  if (loadError) return (
+    <div style={{ padding: 20, textAlign: 'center' }}>
+      <div style={{ color: C.hint, marginBottom: 16 }}>{loadError}</div>
+      <button onClick={loadAll} style={{ padding: '10px 24px', borderRadius: 10, background: C.blue, color: 'white', border: 'none', fontSize: 15, cursor: 'pointer' }}>
+        Повторить
+      </button>
+    </div>
+  );
+  if (!group) return null;
 
   const myBalance = balanceInfo.debts.find((d) => d.userId === user?.id)?.amount ?? 0;
   const filtered = group.members.filter((m) => {
