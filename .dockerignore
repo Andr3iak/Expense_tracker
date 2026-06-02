@@ -1,0 +1,21 @@
+node_modules
+.git
+.claude
+*.local
+.DS_Store
+
+# Учебные архивы и копии
+ВСЁ
+бэк
+Andr3iak Expense_tracker main backend
+Andr3iak Expense_tracker main webapp
+
+# Dev артефакты
+backend/dist
+webapp/dist
+**/*.test.ts
+**/*.spec.ts
+**/*.spec.skip.ts
+**/test.db
+**/tsconfig.tsbuildinfo
+**/tsconfig.build.tsbuildinfo
