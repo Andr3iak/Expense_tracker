@@ -25,7 +25,7 @@ export const GroupPage = () => {
   const [expenseSheet, setExpenseSheet] = useState<Expense | null>(null);
 
   const loadAll = useCallback(() => {
-    if (!groupId) return;
+    if (!groupId || !user) return;
     Promise.all([
       groupsApi.getById(groupId),
       expensesApi.getByGroup(groupId),
@@ -34,8 +34,10 @@ export const GroupPage = () => {
       setGroup(g);
       setExpenses(exps);
       setBalanceInfo(bal);
+    }).catch((err) => {
+      console.error('Ошибка загрузки группы:', err);
     });
-  }, [groupId]);
+  }, [groupId, user]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 

@@ -18,10 +18,11 @@ export const CloseGroupPage = () => {
   const { user } = useUser();
 
   useEffect(() => {
-    if (!groupId) return;
+    if (!groupId || !user) return;
     Promise.all([groupsApi.getById(groupId), balancesApi.getByGroup(groupId)])
-      .then(([g, b]) => { setGroup(g); setInfo(b); });
-  }, [groupId]);
+      .then(([g, b]) => { setGroup(g); setInfo(b); })
+      .catch((err) => { console.error('Ошибка загрузки группы:', err); });
+  }, [groupId, user]);
 
   if (done && group) {
     return (
