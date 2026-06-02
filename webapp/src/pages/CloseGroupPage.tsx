@@ -15,14 +15,23 @@ export const CloseGroupPage = () => {
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [info, setInfo] = useState<BalanceInfo | null>(null);
   const [done, setDone] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { user } = useUser();
 
   useEffect(() => {
     if (!groupId || !user) return;
+    setLoadError(null);
     Promise.all([groupsApi.getById(groupId), balancesApi.getByGroup(groupId)])
       .then(([g, b]) => { setGroup(g); setInfo(b); })
-      .catch((err) => { console.error('Ошибка загрузки группы:', err); });
+      .catch((err: any) => setLoadError(err.message || 'Ошибка загрузки'));
   }, [groupId, user]);
+
+  if (loadError) return (
+    <div style={{ padding: 20, textAlign: 'center' }}>
+      <div style={{ color: C.hint, marginBottom: 16 }}>{loadError}</div>
+      <Btn label="Назад" onTap={() => navigate(-1)} />
+    </div>
+  );
 
   if (done && group) {
     return (

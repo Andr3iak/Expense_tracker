@@ -30,21 +30,33 @@ export const InviteMembersPage = () => {
   const [copied, setCopied] = useState(false);
   // userId → 'invited' | 'adding' для UI-фидбека без перезагрузки
   const [inviteStatus, setInviteStatus] = useState<Record<number, 'inviting' | 'invited'>>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!groupId || !user) return;
-    const [g, known] = await Promise.all([
-      groupsApi.getById(groupId),
-      // Только пользователи из общих групп — не вся база
-      usersApi.getKnown(user.id),
-    ]);
-    setGroup(g);
-    setKnownUsers(known);
+    setLoadError(null);
+    try {
+      const [g, known] = await Promise.all([
+        groupsApi.getById(groupId),
+        usersApi.getKnown(user.id),
+      ]);
+      setGroup(g);
+      setKnownUsers(known);
+    } catch (err: any) {
+      setLoadError(err.message || 'Ошибка загрузки');
+    }
   }, [groupId, user?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  if (!group) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
+  if (!group && !loadError) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
+  if (loadError) return (
+    <div style={{ padding: 20, textAlign: 'center' }}>
+      <div style={{ color: C.hint, marginBottom: 16 }}>{loadError}</div>
+      <button onClick={loadData} style={{ padding: '10px 24px', borderRadius: 10, background: C.blue, color: 'white', border: 'none', fontSize: 15, cursor: 'pointer' }}>Повторить</button>
+    </div>
+  );
+  if (!group) return null;
 
   const memberIds = new Set(group.members.map((m) => m.userId));
 

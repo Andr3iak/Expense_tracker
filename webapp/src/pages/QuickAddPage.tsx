@@ -27,18 +27,25 @@ export const QuickAddPage = () => {
   const [tag, setTag] = useState('');
   const [who, setWho] = useState<number | null>(null);
   const [success, setSuccess] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!groupId || !user) return;
+    setLoadError(null);
     groupsApi.getById(groupId).then((g) => {
       setGroup(g);
       if (g.members.length > 0) setWho(g.members[0].userId);
-    }).catch((err) => {
-      console.error('Ошибка загрузки группы:', err);
-    });
+    }).catch((err: any) => setLoadError(err.message || 'Ошибка загрузки'));
   }, [groupId, user]);
 
-  if (!group) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
+  if (!group && !loadError) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
+  if (loadError) return (
+    <div style={{ padding: 20, textAlign: 'center' }}>
+      <div style={{ color: C.hint, marginBottom: 16 }}>{loadError}</div>
+      <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', borderRadius: 10, background: C.blue, color: 'white', border: 'none', fontSize: 15, cursor: 'pointer' }}>Назад</button>
+    </div>
+  );
+  if (!group) return null;
 
   const handleAdd = async () => {
     const n = parseFloat(amount);

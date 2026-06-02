@@ -22,9 +22,11 @@ export const AddExpensePage = () => {
   const [description, setDescription] = useState(editingExpense?.description ?? '');
   const [category, setCategory] = useState(editingExpense?.category ?? 'other');
   const [paidBy, setPaidBy] = useState<number | null>(editingExpense?.paidBy ?? null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!groupId || !user) return;
+    setLoadError(null);
     Promise.all([
       groupsApi.getById(groupId),
       expensesApi.getCategories(),
@@ -32,9 +34,7 @@ export const AddExpensePage = () => {
       setGroup(g);
       setCategories(cats);
       if (!paidBy && g.members.length > 0) setPaidBy(g.members[0].userId);
-    }).catch((err) => {
-      console.error('Ошибка загрузки страницы расхода:', err);
-    });
+    }).catch((err: any) => setLoadError(err.message || 'Ошибка загрузки'));
   }, [groupId, user]);
 
   const ok = !!amount && parseFloat(amount) > 0 && !!description.trim();
@@ -59,6 +59,12 @@ export const AddExpensePage = () => {
   useBackButton(() => navigate(`/group/${groupId}`));
   useMainButton(isEditing ? 'Сохранить →' : 'Далее →', handleNext, ok);
 
+  if (loadError) return (
+    <div style={{ padding: 20, textAlign: 'center' }}>
+      <div style={{ color: C.hint, marginBottom: 16 }}>{loadError}</div>
+      <button onClick={() => navigate(-1)} style={{ padding: '10px 24px', borderRadius: 10, background: C.blue, color: 'white', border: 'none', fontSize: 15, cursor: 'pointer' }}>Назад</button>
+    </div>
+  );
   if (!group) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
   return (
