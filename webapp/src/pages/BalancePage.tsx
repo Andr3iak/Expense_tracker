@@ -24,23 +24,30 @@ export const BalancePage = () => {
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [sheet, setSheet] = useState<TxItem | null>(null);
   const [settling, setSettling] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (!groupId || !user) return;
+    setLoadError(null);
     Promise.all([
       balancesApi.getByGroup(groupId),
       groupsApi.getById(groupId),
     ]).then(([bal, g]) => {
       setInfo(bal);
       setGroup(g);
-    }).catch((err) => {
-      console.error('Ошибка загрузки баланса:', err);
-    });
+    }).catch((err: any) => setLoadError(err.message || 'Ошибка загрузки баланса'));
   }, [groupId, user]);
 
   useEffect(() => { load(); }, [load]);
 
-  if (!info) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
+  if (!info && !loadError) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
+  if (loadError) return (
+    <div style={{ padding: 20, textAlign: 'center' }}>
+      <div style={{ color: C.hint, marginBottom: 16 }}>{loadError}</div>
+      <button onClick={load} style={{ padding: '10px 24px', borderRadius: 10, background: C.blue, color: 'white', border: 'none', fontSize: 15, cursor: 'pointer' }}>Повторить</button>
+    </div>
+  );
+  if (!info) return null;
 
   const myId = user?.id;
   const myBalance = info.debts.find((d) => d.userId === myId)?.amount ?? 0;

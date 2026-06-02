@@ -200,7 +200,6 @@ export class ExpensesService {
   async deleteExpense(groupId: string, expenseId: string) {
     const expense = await this.prisma.expense.findFirst({ where: { id: expenseId, groupId } });
     if (!expense) throw new NotFoundException('Expense not found');
-    await this.prisma.expenseParticipant.deleteMany({ where: { expenseId } });
     await this.prisma.expense.delete({ where: { id: expenseId } });
     return { deleted: true };
   }

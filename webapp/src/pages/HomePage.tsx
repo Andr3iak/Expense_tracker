@@ -6,17 +6,18 @@ import { groupsApi } from '../utils/api';
 import type { Group, GroupInvitation } from '../utils/api';
 
 export const HomePage = () => {
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const navigate = useNavigate();
   const [groups, setGroups] = useState<Group[]>([]);
   const [archivedGroups, setArchivedGroups] = useState<Group[]>([]);
   const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
   const [handlingInvite, setHandlingInvite] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
     try {
       const [active, archived, invites] = await Promise.all([
         groupsApi.getAll(user.id),
@@ -67,7 +68,7 @@ export const HomePage = () => {
   const displayName = user?.firstName || user?.username || 'User';
   const av = displayName.slice(0, 2).toUpperCase();
 
-  if (loading) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
+  if (userLoading || loading) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: C.bg, position: 'relative' }}>
