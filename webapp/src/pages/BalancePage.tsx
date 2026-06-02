@@ -26,15 +26,17 @@ export const BalancePage = () => {
   const [settling, setSettling] = useState(false);
 
   const load = useCallback(() => {
-    if (!groupId) return;
+    if (!groupId || !user) return;
     Promise.all([
       balancesApi.getByGroup(groupId),
       groupsApi.getById(groupId),
     ]).then(([bal, g]) => {
       setInfo(bal);
       setGroup(g);
+    }).catch((err) => {
+      console.error('Ошибка загрузки баланса:', err);
     });
-  }, [groupId]);
+  }, [groupId, user]);
 
   useEffect(() => { load(); }, [load]);
 

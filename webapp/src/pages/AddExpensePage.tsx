@@ -5,11 +5,13 @@ import { groupsApi, expensesApi } from '../utils/api';
 import type { GroupDetail, Category, Expense } from '../utils/api';
 import { avatarColor, initials } from '../components/ui';
 import { useBackButton, useMainButton, hapticImpact } from '../hooks';
+import { useUser } from '../context/UserContext';
 
 export const AddExpensePage = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useUser();
   // При редактировании GroupPage передаёт { expense } в state
   const editingExpense = (location.state as { expense?: Expense } | null)?.expense ?? null;
   const isEditing = !!editingExpense;
@@ -22,7 +24,7 @@ export const AddExpensePage = () => {
   const [paidBy, setPaidBy] = useState<number | null>(editingExpense?.paidBy ?? null);
 
   useEffect(() => {
-    if (!groupId) return;
+    if (!groupId || !user) return;
     Promise.all([
       groupsApi.getById(groupId),
       expensesApi.getCategories(),
@@ -30,8 +32,10 @@ export const AddExpensePage = () => {
       setGroup(g);
       setCategories(cats);
       if (!paidBy && g.members.length > 0) setPaidBy(g.members[0].userId);
+    }).catch((err) => {
+      console.error('Ошибка загрузки страницы расхода:', err);
     });
-  }, [groupId]);
+  }, [groupId, user]);
 
   const ok = !!amount && parseFloat(amount) > 0 && !!description.trim();
 

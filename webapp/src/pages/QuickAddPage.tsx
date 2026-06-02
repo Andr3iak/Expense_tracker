@@ -8,6 +8,7 @@ import { groupsApi, expensesApi } from '../utils/api';
 import type { GroupDetail } from '../utils/api';
 import { avatarColor, initials } from '../components/ui';
 import { hapticImpact, hapticNotification } from '../hooks';
+import { useUser } from '../context/UserContext';
 
 const SUGGESTIONS = [
   { label: 'Море ✈', tag: 'travel' },
@@ -20,6 +21,7 @@ const SUGGESTIONS = [
 export const QuickAddPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
+  const { user } = useUser();
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [amount, setAmount] = useState('');
   const [tag, setTag] = useState('');
@@ -27,12 +29,14 @@ export const QuickAddPage = () => {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!groupId) return;
+    if (!groupId || !user) return;
     groupsApi.getById(groupId).then((g) => {
       setGroup(g);
       if (g.members.length > 0) setWho(g.members[0].userId);
+    }).catch((err) => {
+      console.error('Ошибка загрузки группы:', err);
     });
-  }, [groupId]);
+  }, [groupId, user]);
 
   if (!group) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
