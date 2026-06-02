@@ -129,7 +129,7 @@ export const SplitModePage = () => {
     && (mode !== 'percent' || pctValid);
 
   useBackButton(() => navigate(-1));
-  useMainButton('Добавить расход', handleSubmit, canSubmit);
+  useMainButton(exp?.expenseId ? 'Сохранить расход' : 'Добавить расход', handleSubmit, canSubmit);
 
   if (!group || !exp) return <div style={{ padding: 20, color: C.hint }}>Загрузка...</div>;
 
